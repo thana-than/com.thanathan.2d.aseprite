@@ -73,6 +73,7 @@ namespace UnityEditor.U2D.Aseprite
         SerializedProperty m_GenerateAnimationClips;
         SerializedProperty m_PrevGenerateAnimationClips;
         SerializedProperty m_GenerateIndividualEvents;
+        SerializedProperty m_PerLayerAnimators;
         SerializedProperty m_GenerateAnimationImageTarget;
         SerializedProperty m_AddUIComponents;
         SerializedProperty m_GenerateSpriteAtlas;
@@ -223,6 +224,7 @@ namespace UnityEditor.U2D.Aseprite
             m_AddShadowCasters = asepriteImporterSettings.FindPropertyRelative("m_AddShadowCasters");
             m_GenerateAnimationClips = asepriteImporterSettings.FindPropertyRelative("m_GenerateAnimationClips");
             m_GenerateIndividualEvents = asepriteImporterSettings.FindPropertyRelative("m_GenerateIndividualEvents");
+            m_PerLayerAnimators = asepriteImporterSettings.FindPropertyRelative("m_PerLayerAnimators");
             m_GenerateAnimationImageTarget = asepriteImporterSettings.FindPropertyRelative("m_GenerateAnimationImageTarget");
             m_AddUIComponents = asepriteImporterSettings.FindPropertyRelative("m_AddUIComponents");
             m_GenerateSpriteAtlas = asepriteImporterSettings.FindPropertyRelative("m_GenerateSpriteAtlas");
@@ -634,6 +636,22 @@ namespace UnityEditor.U2D.Aseprite
             };
             generateClipsField.Bind(serializedObject);
             parent.Add(generateClipsField);
+
+            var isPerLayerEnabled = m_GenerateAnimationClips.boolValue;
+            var perLayerAnimatorsField = new PropertyField(m_PerLayerAnimators, styles.perLayerAnimators.text)
+            {
+                tooltip = styles.perLayerAnimators.tooltip
+            };
+            perLayerAnimatorsField.Bind(serializedObject);
+            perLayerAnimatorsField.AddToClassList(k_SubElementUssClass);
+            perLayerAnimatorsField.SetEnabled(isPerLayerEnabled);
+            perLayerAnimatorsField.schedule.Execute(() =>
+            {
+                isPerLayerEnabled = m_GenerateAnimationClips.boolValue;
+                if (perLayerAnimatorsField.enabledSelf != isPerLayerEnabled)
+                    perLayerAnimatorsField.SetEnabled(isPerLayerEnabled);
+            }).Every(k_PollForChangesInternal);
+            parent.Add(perLayerAnimatorsField);
 
             // Generate individual animation events toggle
             var isIndividualEventsEnabled = m_GenerateAnimationClips.boolValue;
@@ -1720,6 +1738,7 @@ namespace UnityEditor.U2D.Aseprite
             public readonly GUIContent addSortingGroup = EditorGUIUtility.TrTextContent("Sorting Group", "Add a Sorting Group component to the root of the generated model prefab if it has more than one Sprite Renderer.");
             public readonly GUIContent addShadowCasters = EditorGUIUtility.TrTextContent("Shadow Casters", "Add Shadow Casters on all GameObjects with SpriteRenderer. Note: The Universal Rendering Pipeline package has to be installed.");
             public readonly GUIContent addUIComponents = EditorGUIUtility.TrTextContent("UI Components", "Add ImageUseSpritePivot and ContentSizeFitter to each Image layer so pivot and size automatically match the sprite during animation.");
+            public readonly GUIContent perLayerAnimators = EditorGUIUtility.TrTextContent("Per-Layer Animators", "Generate one AnimatorController and Animator per layer. Clips are prefixed with the layer name and only target that layer's own component.");
             public readonly GUIContent generateAnimationClips = EditorGUIUtility.TrTextContent("Animation Clips", "Generate Animation Clips based on the frame and tag data from the Aseprite file.");
             public readonly GUIContent generateIndividualEvents = EditorGUIUtility.TrTextContent("Individual Events", "Events will be generated with their own method name. If disabled, all events will be received by the method `OnAnimationEvent(string)`.");
             public readonly GUIContent generateAnimationImageTarget = EditorGUIUtility.TrTextContent("Target UI Image", "Generated Animation Clips will target the UI Image component instead of SpriteRenderer.");

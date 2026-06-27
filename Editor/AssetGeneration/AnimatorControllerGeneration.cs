@@ -45,5 +45,43 @@ namespace UnityEditor.U2D.Aseprite
                 AnimatorController.SetAnimatorController(animator, controller);
             }
         }
+
+        // Creates one AnimatorController per layer and attaches an Animator to each layer's GameObject.
+        public static void GeneratePerLayer(
+            AssetImportContext ctx,
+            string assetName,
+            Dictionary<int, List<AnimationClip>> layerClips,
+            Dictionary<int, GameObject> layerIdToGameObject,
+            bool generateModelPrefab)
+        {
+            foreach (var (layerIndex, clips) in layerClips)
+            {
+                if (clips.Count == 0) continue;
+                if (!layerIdToGameObject.TryGetValue(layerIndex, out var layerGo)) continue;
+
+                var layerName = layerGo.name;
+                var controller = new AnimatorController();
+                controller.name = assetName + "_" + layerName;
+                controller.AddLayer("Base Layer");
+
+                foreach (var clip in clips)
+                    controller.AddMotion(clip);
+
+                ctx.AddObjectToAsset(controller.name + "_Controller", controller);
+                foreach (var animLayer in controller.layers)
+                {
+                    var sm = animLayer.stateMachine;
+                    ctx.AddObjectToAsset(sm.name + "_" + layerName + "_StateMachine", sm);
+                    foreach (var state in sm.states)
+                        ctx.AddObjectToAsset(state.state.name + "_State", state.state);
+                }
+
+                if (generateModelPrefab)
+                {
+                    var animator = layerGo.AddComponent<Animator>();
+                    AnimatorController.SetAnimatorController(animator, controller);
+                }
+            }
+        }
     }
 }

@@ -136,6 +136,7 @@ namespace UnityEditor.U2D.Aseprite
 
         GameObject m_RootGameObject;
         readonly Dictionary<int, GameObject> m_LayerIdToGameObject = new Dictionary<int, GameObject>();
+        Dictionary<int, List<AnimationClip>> m_PerLayerClips;
 
         AsepriteImportData importData
         {
@@ -1182,6 +1183,25 @@ namespace UnityEditor.U2D.Aseprite
                 return;
 
             var sprites = output.sprites;
+
+            if (m_AsepriteImporterSettings.perLayerAnimators)
+            {
+                m_PerLayerClips = AnimationClipGeneration.GeneratePerLayer(
+                    assetName,
+                    sprites,
+                    m_AsepriteFile,
+                    m_AsepriteLayers,
+                    m_Frames,
+                    m_Tags,
+                    m_AsepriteImporterSettings.generateIndividualEvents,
+                    m_AsepriteImporterSettings.generateAnimationImageTarget);
+
+                foreach (var kv in m_PerLayerClips)
+                    foreach (var clip in kv.Value)
+                        ctx.AddObjectToAsset(clip.name, clip);
+                return;
+            }
+
             var clips = AnimationClipGeneration.Generate(
                 assetName,
                 sprites,
@@ -1201,6 +1221,13 @@ namespace UnityEditor.U2D.Aseprite
         {
             if (m_AsepriteImporterSettings.fileImportMode != FileImportModes.AnimatedSprite)
                 return;
+
+            if (m_AsepriteImporterSettings.perLayerAnimators)
+            {
+                if (m_PerLayerClips != null && m_PerLayerClips.Count > 0)
+                    AnimatorControllerGeneration.GeneratePerLayer(ctx, assetName, m_PerLayerClips, m_LayerIdToGameObject, generateModelPrefab);
+                return;
+            }
 
             AnimatorControllerGeneration.Generate(ctx, assetName, m_RootGameObject, generateModelPrefab);
         }

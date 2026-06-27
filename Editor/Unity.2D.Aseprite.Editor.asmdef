@@ -7,6 +7,7 @@
         "Unity.2D.Tilemap.Editor",
         "Unity.2D.Common.Editor",
         "Unity.2D.Aseprite.Common",
+        "Unity.2D.Aseprite.Runtime",
         "Unity.Burst",
         "Unity.Mathematics",
         "Unity.RenderPipelines.Universal.Runtime",

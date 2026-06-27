@@ -66,6 +66,102 @@ namespace UnityEditor.U2D.Aseprite
             return clips.ToArray();
         }
 
+        // Generates one set of clips per normal layer. Each clip targets the component on the
+        // Animator's own GameObject (empty path) rather than addressing layers by transform path.
+        // Layers with no content in a given tag are skipped entirely.
+        public static Dictionary<int, List<AnimationClip>> GeneratePerLayer(
+            string assetName,
+            IReadOnlyList<Sprite> sprites,
+            AsepriteFile file,
+            IReadOnlyList<Layer> layers,
+            IReadOnlyList<Frame> frames,
+            List<Tag> tags,
+            bool generateIndividualEvents,
+            bool generateAnimationImageTarget)
+        {
+            if (tags.Count == 0)
+                tags.Add(new Tag { name = assetName + "_Clip", fromFrame = 0, toFrame = file.noOfFrames });
+
+            var animationNames = new HashSet<string>(tags.Count);
+            var tagNames = new string[tags.Count];
+            for (var i = 0; i < tags.Count; ++i)
+            {
+                var name = tags[i].name;
+                if (animationNames.Contains(name))
+                {
+                    var idx = 0;
+                    while (animationNames.Contains(name))
+                        name = $"{tags[i].name}_{idx++}";
+                    Debug.LogWarning($"The animation clip name {tags[i].name} is already in use. Renaming to {name}.");
+                }
+                tagNames[i] = name;
+                animationNames.Add(name);
+            }
+
+            var result = new Dictionary<int, List<AnimationClip>>();
+            foreach (var layer in layers)
+            {
+                if (layer.layerType != LayerTypes.Normal)
+                    continue;
+
+                var layerClips = new List<AnimationClip>();
+                for (var i = 0; i < tags.Count; ++i)
+                {
+                    if (!LayerHasContentInTag(layer, tags[i]))
+                        continue;
+
+                    var clip = CreateLayerClip(
+                        tags[i], layer.name + "_" + tagNames[i],
+                        layer, frames, sprites, generateIndividualEvents, generateAnimationImageTarget);
+                    layerClips.Add(clip);
+                }
+
+                if (layerClips.Count > 0)
+                    result[layer.index] = layerClips;
+            }
+
+            return result;
+        }
+
+        static bool LayerHasContentInTag(Layer layer, Tag tag)
+        {
+            foreach (var cell in layer.cells)
+                if (cell.frameIndex >= tag.fromFrame && cell.frameIndex < tag.toFrame)
+                    return true;
+            foreach (var lc in layer.linkedCells)
+                if (lc.frameIndex >= tag.fromFrame && lc.frameIndex < tag.toFrame)
+                    return true;
+            return false;
+        }
+
+        static AnimationClip CreateLayerClip(
+            Tag tag,
+            string clipName,
+            Layer layer,
+            IReadOnlyList<Frame> frames,
+            IReadOnlyList<Sprite> sprites,
+            bool generateIndividualEvents,
+            bool generateAnimationImageTarget)
+        {
+            var animationClip = new AnimationClip { name = clipName, frameRate = 100f };
+            AnimationUtility.SetAnimationClipSettings(animationClip, new AnimationClipSettings { loopTime = tag.isRepeating });
+
+            var componentType = generateAnimationImageTarget ? typeof(Image) : typeof(SpriteRenderer);
+
+            var spriteKeyframes = new List<ObjectReferenceKeyframe>();
+            AddCellsToClip(layer.cells, tag, sprites, frames, spriteKeyframes);
+            AddLinkedCellsToClip(layer.linkedCells, layer.cells, tag, sprites, frames, spriteKeyframes);
+            spriteKeyframes.Sort((x, y) => x.time.CompareTo(y.time));
+            DuplicateLastFrame(spriteKeyframes, frames[tag.toFrame - 1], animationClip.frameRate);
+
+            var spriteBinding = EditorCurveBinding.PPtrCurve("", componentType, "m_Sprite");
+            AnimationUtility.SetObjectReferenceCurve(animationClip, spriteBinding, spriteKeyframes.ToArray());
+
+            AddAnimationEvents(tag, frames, animationClip, generateIndividualEvents);
+
+            return animationClip;
+        }
+
         static bool DoesLayerDisableRenderer(Layer layer, IReadOnlyList<Tag> tags)
         {
             if (layer.layerType != LayerTypes.Normal)
