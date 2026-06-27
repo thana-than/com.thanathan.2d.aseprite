@@ -1,6 +1,11 @@
 # PACKAGE ADDITIONS:
-[Pp]rojectSettings/
-[Pp]ackages/
+**/[Pp]rojectSettings/
+**/[Pp]ackages/
+**/[Ll]ibrary/
+**/[Tt]emp/
+**/[Uu]ser[Ss]ettings/
+**/[Ll]ogs/
+**/[Tmp]/
 
 [Ll]ibrary/
 [Tt]emp/
