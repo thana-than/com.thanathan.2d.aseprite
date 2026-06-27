@@ -98,8 +98,7 @@ namespace UnityEditor.U2D.Aseprite
                 var layerName = layerGo.name;
                 var prefix = layerName + "_";
 
-                var overrideController = new AnimatorOverrideController(baseController);
-                overrideController.name = assetName + "_" + layerName;
+                var overrideController = new AnimatorOverrideController(baseController) { name = assetName + "_" + layerName };
 
                 var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>();
                 overrideController.GetOverrides(overrides);
