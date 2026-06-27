@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace UnityEditor.U2D.Aseprite
 {
@@ -16,7 +17,8 @@ namespace UnityEditor.U2D.Aseprite
             IReadOnlyList<Frame> frames,
             List<Tag> tags,
             Dictionary<int, GameObject> layerIdToGameObject,
-            bool generateIndividualEvents)
+            bool generateIndividualEvents,
+            bool generateAnimationImageTarget = false)
         {
             var noOfFrames = file.noOfFrames;
             if (tags.Count == 0)
@@ -56,7 +58,7 @@ namespace UnityEditor.U2D.Aseprite
                     Debug.LogWarning($"The animation clip name {tags[i].name} is already in use. Renaming to {clipName}.");
                 }
 
-                var clip = CreateClip(tags[i], clipName, layers, layersWithDisabledRenderer, layersWithCustomSortingOrder, frames, sprites, layerIdToGameObject, generateIndividualEvents);
+                var clip = CreateClip(tags[i], clipName, layers, layersWithDisabledRenderer, layersWithCustomSortingOrder, frames, sprites, layerIdToGameObject, generateIndividualEvents, generateAnimationImageTarget);
                 clips.Add(clip);
                 animationNames.Add(clipName);
             }
@@ -141,7 +143,8 @@ namespace UnityEditor.U2D.Aseprite
             IReadOnlyList<Frame> frames,
             IReadOnlyList<Sprite> sprites,
             IReadOnlyDictionary<int, GameObject> layerIdToGameObject,
-            bool generateIndividualEvents)
+            bool generateIndividualEvents,
+            bool generateAnimationImageTarget)
         {
             var animationClip = new AnimationClip()
             {
@@ -153,6 +156,8 @@ namespace UnityEditor.U2D.Aseprite
             clipSettings.loopTime = tag.isRepeating;
             AnimationUtility.SetAnimationClipSettings(animationClip, clipSettings);
 
+            var componentType = generateAnimationImageTarget ? typeof(Image) : typeof(SpriteRenderer);
+
             for (var i = 0; i < layers.Count; ++i)
             {
                 var layer = layers[i];
@@ -160,7 +165,10 @@ namespace UnityEditor.U2D.Aseprite
                     continue;
 
                 var layerGo = layerIdToGameObject[layer.index];
-                if (layerGo.GetComponent<SpriteRenderer>() == null)
+                var hasComponent = generateAnimationImageTarget
+                    ? layerGo.GetComponent<Image>() != null
+                    : layerGo.GetComponent<SpriteRenderer>() != null;
+                if (!hasComponent)
                     continue;
 
                 var doesLayerDisableRenderer = layersWithDisabledRenderer.Contains(layer);
@@ -179,11 +187,12 @@ namespace UnityEditor.U2D.Aseprite
                 DuplicateLastFrame(spriteKeyframes, frames[tag.toFrame - 1], animationClip.frameRate);
 
                 var path = GetTransformPath(layerTransform);
-                var spriteBinding = EditorCurveBinding.PPtrCurve(path, typeof(SpriteRenderer), "m_Sprite");
+                var spriteBinding = EditorCurveBinding.PPtrCurve(path, componentType, "m_Sprite");
                 AnimationUtility.SetObjectReferenceCurve(animationClip, spriteBinding, spriteKeyframes.ToArray());
 
-                AddEnabledKeyframes(layerTransform, tag, frames, doesLayerDisableRenderer, activeFrames, animationClip);
-                AddSortOrderKeyframes(layerTransform, layer, tag, frames, cells, doesLayerHaveCustomSorting, animationClip);
+                AddEnabledKeyframes(layerTransform, tag, frames, doesLayerDisableRenderer, activeFrames, animationClip, componentType);
+                if (!generateAnimationImageTarget)
+                    AddSortOrderKeyframes(layerTransform, layer, tag, frames, cells, doesLayerHaveCustomSorting, animationClip);
                 AddAnimationEvents(tag, frames, animationClip, generateIndividualEvents);
             }
 
@@ -278,13 +287,13 @@ namespace UnityEditor.U2D.Aseprite
             return path;
         }
 
-        static void AddEnabledKeyframes(Transform layerTransform, Tag tag, IReadOnlyList<Frame> frames, bool doesLayerDisableRenderer, IReadOnlyCollection<int> activeFrames, AnimationClip animationClip)
+        static void AddEnabledKeyframes(Transform layerTransform, Tag tag, IReadOnlyList<Frame> frames, bool doesLayerDisableRenderer, IReadOnlyCollection<int> activeFrames, AnimationClip animationClip, System.Type componentType)
         {
             if (activeFrames.Count == tag.noOfFrames && !doesLayerDisableRenderer)
                 return;
 
             var path = GetTransformPath(layerTransform);
-            var enabledBinding = EditorCurveBinding.FloatCurve(path, typeof(SpriteRenderer), "m_Enabled");
+            var enabledBinding = EditorCurveBinding.FloatCurve(path, componentType, "m_Enabled");
             var enabledKeyframes = new List<Keyframe>();
 
             var disabledPrevFrame = false;

@@ -89,6 +89,7 @@ namespace UnityEditor.U2D.Aseprite
             addSortingGroup = true,
             addShadowCasters = false,
             generateIndividualEvents = true,
+            addUIComponents = true,
             generateSpriteAtlas = true
         };
 
@@ -1189,7 +1190,8 @@ namespace UnityEditor.U2D.Aseprite
                 m_Frames,
                 m_Tags,
                 m_LayerIdToGameObject,
-                m_AsepriteImporterSettings.generateIndividualEvents);
+                m_AsepriteImporterSettings.generateIndividualEvents,
+                m_AsepriteImporterSettings.generateAnimationImageTarget);
 
             for (var i = 0; i < clips.Length; ++i)
                 ctx.AddObjectToAsset(clips[i].name, clips[i]);

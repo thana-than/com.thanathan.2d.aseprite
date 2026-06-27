@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.UI;
 
 namespace UnityEditor.U2D.Aseprite
 {
@@ -19,21 +20,29 @@ namespace UnityEditor.U2D.Aseprite
             out GameObject rootGameObject)
         {
             rootGameObject = new GameObject("Root");
+            if (!importSettings.generateAnimationImageTarget)
+            {
 #if ENABLE_URP
-            if (importSettings.addShadowCasters && layers.Count > 1)
-                rootGameObject.AddComponent<UnityEngine.Rendering.Universal.CompositeShadowCaster2D>();
+                if (importSettings.addShadowCasters && layers.Count > 1)
+                    rootGameObject.AddComponent<UnityEngine.Rendering.Universal.CompositeShadowCaster2D>();
 #endif
-            if (importSettings.addSortingGroup && layers.Count > 1)
-                rootGameObject.AddComponent<SortingGroup>();
+                if (importSettings.addSortingGroup && layers.Count > 1)
+                    rootGameObject.AddComponent<SortingGroup>();
+            }
 
             if (layers.Count == 1)
             {
                 layerIdToGameObject.Add(layers[0].index, rootGameObject);
             }
             else
-                CreateLayerHierarchy(layers, layerIdToGameObject, rootGameObject);
+                CreateLayerHierarchy(layers, layerIdToGameObject, rootGameObject, importSettings.generateAnimationImageTarget);
 
-            for (var i = layers.Count - 1; i >= 0; --i)
+            // UI Image renders in sibling order (higher index = in front), opposite of SpriteRenderer sorting.
+            // Iterate forward for UI so layer[0] (Aseprite bottom) gets sibling index 0 (renders behind).
+            int start = importSettings.generateAnimationImageTarget ? 0 : layers.Count - 1;
+            int end = importSettings.generateAnimationImageTarget ? layers.Count : -1;
+            int step = importSettings.generateAnimationImageTarget ? 1 : -1;
+            for (var i = start; i != end; i += step)
             {
                 var layer = layers[i];
                 SetupLayerGameObject(layer, layerIdToGameObject, output.sprites, importSettings, canvasSize);
@@ -56,15 +65,17 @@ namespace UnityEditor.U2D.Aseprite
                 rootGameObject.hideFlags = HideFlags.HideAndDontSave;
         }
 
-        static void CreateLayerHierarchy(List<Layer> layers, Dictionary<int, GameObject> layerIdToGameObject, GameObject root)
+        static void CreateLayerHierarchy(List<Layer> layers, Dictionary<int, GameObject> layerIdToGameObject, GameObject root, bool uiOrder = false)
         {
-            for (var i = layers.Count - 1; i >= 0; --i)
+            int start = uiOrder ? 0 : layers.Count - 1;
+            int end = uiOrder ? layers.Count : -1;
+            int step = uiOrder ? 1 : -1;
+            for (var i = start; i != end; i += step)
             {
                 var layer = layers[i];
                 var go = new GameObject(layer.name);
                 go.transform.parent = root.transform;
                 go.transform.localRotation = Quaternion.identity;
-
                 layerIdToGameObject.Add(layer.index, go);
             }
         }
@@ -83,14 +94,36 @@ namespace UnityEditor.U2D.Aseprite
             var gameObject = layerIdToGameObject[layer.index];
             var sprite = Array.Find(sprites, x => x.GetSpriteID() == firstCell.spriteId);
 
-            var sr = gameObject.AddComponent<SpriteRenderer>();
-            sr.sprite = sprite;
-            sr.sortingOrder = layer.index + firstCell.additiveSortOrder;
+            if (importSettings.generateAnimationImageTarget)
+            {
+                var image = gameObject.AddComponent<Image>();
+                image.sprite = sprite;
 
+                var rt = gameObject.GetComponent<RectTransform>();
+                if (sprite != null)
+                {
+                    rt.sizeDelta = new Vector2(sprite.rect.width, sprite.rect.height);
+                    rt.pivot = sprite.pivot / sprite.rect.size;
+                }
+
+                if (importSettings.addUIComponents)
+                {
+                    var csf = gameObject.AddComponent<ContentSizeFitter>();
+                    csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+                    csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                    gameObject.AddComponent<ImageUseSpritePivot>();
+                }
+            }
+            else
+            {
+                var sr = gameObject.AddComponent<SpriteRenderer>();
+                sr.sprite = sprite;
+                sr.sortingOrder = layer.index + firstCell.additiveSortOrder;
 #if ENABLE_URP
-            if (importSettings.addShadowCasters)
-                gameObject.AddComponent<UnityEngine.Rendering.Universal.ShadowCaster2D>();
+                if (importSettings.addShadowCasters)
+                    gameObject.AddComponent<UnityEngine.Rendering.Universal.ShadowCaster2D>();
 #endif
+            }
 
             if (importSettings.defaultPivotSpace == PivotSpaces.Canvas)
                 gameObject.transform.localPosition = Vector3.zero;

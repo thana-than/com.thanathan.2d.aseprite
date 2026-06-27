@@ -73,6 +73,8 @@ namespace UnityEditor.U2D.Aseprite
         SerializedProperty m_GenerateAnimationClips;
         SerializedProperty m_PrevGenerateAnimationClips;
         SerializedProperty m_GenerateIndividualEvents;
+        SerializedProperty m_GenerateAnimationImageTarget;
+        SerializedProperty m_AddUIComponents;
         SerializedProperty m_GenerateSpriteAtlas;
 
         VisualElement m_RootVisualElement;
@@ -221,6 +223,8 @@ namespace UnityEditor.U2D.Aseprite
             m_AddShadowCasters = asepriteImporterSettings.FindPropertyRelative("m_AddShadowCasters");
             m_GenerateAnimationClips = asepriteImporterSettings.FindPropertyRelative("m_GenerateAnimationClips");
             m_GenerateIndividualEvents = asepriteImporterSettings.FindPropertyRelative("m_GenerateIndividualEvents");
+            m_GenerateAnimationImageTarget = asepriteImporterSettings.FindPropertyRelative("m_GenerateAnimationImageTarget");
+            m_AddUIComponents = asepriteImporterSettings.FindPropertyRelative("m_AddUIComponents");
             m_GenerateSpriteAtlas = asepriteImporterSettings.FindPropertyRelative("m_GenerateSpriteAtlas");
 
             var prevAsepriteImporterSettings = serializedObject.FindProperty("m_PreviousAsepriteImporterSettings");
@@ -385,8 +389,8 @@ namespace UnityEditor.U2D.Aseprite
             }).Every(k_PollForChangesInternal);
             hiddenLayersField.Bind(serializedObject);
             foldOut.Add(hiddenLayersField);
-            
-            var layerModeField = new EnumField(s_Styles.layerImportMode.text, (LayerImportModes) m_LayerImportMode.intValue)
+
+            var layerModeField = new EnumField(s_Styles.layerImportMode.text, (LayerImportModes)m_LayerImportMode.intValue)
             {
                 tooltip = s_Styles.layerImportMode.tooltip,
                 bindingPath = m_LayerImportMode.propertyPath
@@ -598,6 +602,31 @@ namespace UnityEditor.U2D.Aseprite
             }).Every(k_PollForChangesInternal);
             parent.Add(shadowCasterField);
 
+            // Add UI components (ImageUseSpritePivot + ContentSizeFitter) — only visible in image target mode
+            var isUIComponentsEnabled = m_GenerateModelPrefab.boolValue && m_GenerateAnimationImageTarget.boolValue;
+            var addUIComponentsField = new PropertyField(m_AddUIComponents, styles.addUIComponents.text)
+            {
+                tooltip = styles.addUIComponents.tooltip,
+                visible = m_GenerateAnimationImageTarget.boolValue
+            };
+            addUIComponentsField.Bind(serializedObject);
+            addUIComponentsField.AddToClassList(k_SubElementUssClass);
+            addUIComponentsField.EnableInClassList(k_HiddenElementUssClass, !m_GenerateAnimationImageTarget.boolValue);
+            addUIComponentsField.SetEnabled(isUIComponentsEnabled);
+            addUIComponentsField.schedule.Execute(() =>
+            {
+                var shouldShow = m_GenerateAnimationImageTarget.boolValue;
+                if (addUIComponentsField.visible != shouldShow)
+                {
+                    addUIComponentsField.visible = shouldShow;
+                    addUIComponentsField.EnableInClassList(k_HiddenElementUssClass, !shouldShow);
+                }
+                isUIComponentsEnabled = m_GenerateModelPrefab.boolValue && m_GenerateAnimationImageTarget.boolValue;
+                if (addUIComponentsField.enabledSelf != isUIComponentsEnabled)
+                    addUIComponentsField.SetEnabled(isUIComponentsEnabled);
+            }).Every(k_PollForChangesInternal);
+            parent.Add(addUIComponentsField);
+
             // Generate animation clips toggle
             var generateClipsField = new PropertyField(m_GenerateAnimationClips, styles.generateAnimationClips.text)
             {
@@ -612,6 +641,11 @@ namespace UnityEditor.U2D.Aseprite
             {
                 tooltip = styles.generateIndividualEvents.tooltip
             };
+            var isGenerateAnimationImageTargetEnabled = m_GenerateAnimationClips.boolValue;
+            var generateAnimationImageTargetField = new PropertyField(m_GenerateAnimationImageTarget, styles.generateAnimationImageTarget.text)
+            {
+                tooltip = styles.generateAnimationImageTarget.tooltip
+            };
             generateIndividualEventsField.Bind(serializedObject);
             generateIndividualEventsField.AddToClassList(k_SubElementUssClass);
             generateIndividualEventsField.SetEnabled(isIndividualEventsEnabled);
@@ -622,6 +656,17 @@ namespace UnityEditor.U2D.Aseprite
                     generateIndividualEventsField.SetEnabled(isIndividualEventsEnabled);
             }).Every(k_PollForChangesInternal);
             parent.Add(generateIndividualEventsField);
+
+            generateAnimationImageTargetField.Bind(serializedObject);
+            generateAnimationImageTargetField.AddToClassList(k_SubElementUssClass);
+            generateAnimationImageTargetField.SetEnabled(isGenerateAnimationImageTargetEnabled);
+            generateAnimationImageTargetField.schedule.Execute(() =>
+            {
+                isGenerateAnimationImageTargetEnabled = m_GenerateAnimationClips.boolValue;
+                if (generateAnimationImageTargetField.enabledSelf != isGenerateAnimationImageTargetEnabled)
+                    generateAnimationImageTargetField.SetEnabled(isGenerateAnimationImageTargetEnabled);
+            }).Every(k_PollForChangesInternal);
+            parent.Add(generateAnimationImageTargetField);
 
             SetupAnimationAssetsButton(parent);
         }
@@ -1674,8 +1719,10 @@ namespace UnityEditor.U2D.Aseprite
 
             public readonly GUIContent addSortingGroup = EditorGUIUtility.TrTextContent("Sorting Group", "Add a Sorting Group component to the root of the generated model prefab if it has more than one Sprite Renderer.");
             public readonly GUIContent addShadowCasters = EditorGUIUtility.TrTextContent("Shadow Casters", "Add Shadow Casters on all GameObjects with SpriteRenderer. Note: The Universal Rendering Pipeline package has to be installed.");
+            public readonly GUIContent addUIComponents = EditorGUIUtility.TrTextContent("UI Components", "Add ImageUseSpritePivot and ContentSizeFitter to each Image layer so pivot and size automatically match the sprite during animation.");
             public readonly GUIContent generateAnimationClips = EditorGUIUtility.TrTextContent("Animation Clips", "Generate Animation Clips based on the frame and tag data from the Aseprite file.");
             public readonly GUIContent generateIndividualEvents = EditorGUIUtility.TrTextContent("Individual Events", "Events will be generated with their own method name. If disabled, all events will be received by the method `OnAnimationEvent(string)`.");
+            public readonly GUIContent generateAnimationImageTarget = EditorGUIUtility.TrTextContent("Target UI Image", "Generated Animation Clips will target the UI Image component instead of SpriteRenderer.");
 
             public readonly GUIContent generateSpriteAtlas = EditorGUIUtility.TrTextContent("Sprite Atlas", "Generate a Sprite Atlas to contain the created texture. This is to remove any gaps between tiles when drawing a tile map.");
 
