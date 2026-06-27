@@ -19,7 +19,9 @@ namespace UnityEditor.U2D.Aseprite
             ref UnityEngine.Object mainAsset,
             out GameObject rootGameObject)
         {
-            rootGameObject = new GameObject("Root");
+            rootGameObject = importSettings.generateAnimationImageTarget
+                ? new GameObject("Root", typeof(RectTransform))
+                : new GameObject("Root");
             if (!importSettings.generateAnimationImageTarget)
             {
 #if ENABLE_URP
