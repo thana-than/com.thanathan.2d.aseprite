@@ -1,3 +1,3 @@
-Aseprite Importer
+# 2D Aseprite Importer (Than Fork)
 
-ScriptedImporter to import .ase/.aseprite files into Unity.
+Fork of Unity's `com.unity.2d.aseprite` from upstream 3.0.2.
