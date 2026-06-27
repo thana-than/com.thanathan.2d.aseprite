@@ -130,7 +130,7 @@ namespace UnityEditor.U2D.Aseprite
                 name = "Root"
             };
 
-            var styleSheet = EditorGUIUtility.Load("packages/com.unity.2d.aseprite/Editor/Assets/UI/AsepriteImporterStyleSheet.uss") as StyleSheet;
+            var styleSheet = EditorGUIUtility.Load("packages/com.thanathan.2d.aseprite/Editor/Assets/UI/AsepriteImporterStyleSheet.uss") as StyleSheet;
             m_RootVisualElement.styleSheets.Add(styleSheet);
 
             m_InspectorSettingsView = new VisualElement()

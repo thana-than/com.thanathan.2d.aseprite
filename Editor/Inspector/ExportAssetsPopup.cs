@@ -49,7 +49,7 @@ namespace UnityEditor.U2D.Aseprite
 
         void CreateGUI()
         {
-            var styleSheet = EditorGUIUtility.Load("packages/com.unity.2d.aseprite/Editor/Assets/UI/ExportAnimAssetsStyleSheet.uss") as StyleSheet;
+            var styleSheet = EditorGUIUtility.Load("packages/com.thanathan.2d.aseprite/Editor/Assets/UI/ExportAnimAssetsStyleSheet.uss") as StyleSheet;
             rootVisualElement.styleSheets.Add(styleSheet);
 
             var headerLabel = new Label(Content.bodyText)
