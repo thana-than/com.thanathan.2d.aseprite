@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -99,29 +98,68 @@ namespace UnityEditor.U2D.Aseprite
                 animationNames.Add(name);
             }
 
+            var componentType = generateAnimationImageTarget ? typeof(Image) : typeof(SpriteRenderer);
             var result = new Dictionary<int, List<AnimationClip>>();
             foreach (var layer in layers)
             {
                 if (layer.layerType != LayerTypes.Normal)
                     continue;
 
+                var hasAnyContent = false;
+                for (var i = 0; i < tags.Count; ++i)
+                {
+                    if (LayerHasContentInTag(layer, tags[i]))
+                    {
+                        hasAnyContent = true;
+                        break;
+                    }
+                }
+                if (!hasAnyContent)
+                    continue;
+
                 var layerClips = new List<AnimationClip>();
                 for (var i = 0; i < tags.Count; ++i)
                 {
-                    if (!LayerHasContentInTag(layer, tags[i]))
-                        continue;
-
-                    var clip = CreateLayerClip(
-                        tags[i], layer.name + "_" + tagNames[i],
-                        layer, frames, sprites, generateIndividualEvents, generateAnimationImageTarget);
-                    layerClips.Add(clip);
+                    var clipName = layer.name + "_" + tagNames[i];
+                    if (LayerHasContentInTag(layer, tags[i]))
+                    {
+                        var clip = CreateLayerClip(
+                            tags[i], clipName,
+                            layer, frames, sprites, generateIndividualEvents, generateAnimationImageTarget);
+                        AddRendererEnabledKeyframe(clip, componentType, true);
+                        layerClips.Add(clip);
+                    }
+                    else
+                    {
+                        layerClips.Add(CreateRendererDisableClip(clipName, tags[i], componentType));
+                    }
                 }
 
-                if (layerClips.Count > 0)
-                    result[layer.index] = layerClips;
+                result[layer.index] = layerClips;
             }
 
             return result;
+        }
+
+        static void AddRendererEnabledKeyframe(AnimationClip clip, Type componentType, bool enabled)
+        {
+            var binding = EditorCurveBinding.FloatCurve("", componentType, "m_Enabled");
+            var keyframe = new Keyframe
+            {
+                value = enabled ? 1f : 0f,
+                time = 0f,
+                inTangent = float.PositiveInfinity,
+                outTangent = float.PositiveInfinity
+            };
+            AnimationUtility.SetEditorCurve(clip, binding, new AnimationCurve(keyframe));
+        }
+
+        static AnimationClip CreateRendererDisableClip(string clipName, Tag tag, Type componentType)
+        {
+            var clip = new AnimationClip { name = clipName, frameRate = 100f };
+            AnimationUtility.SetAnimationClipSettings(clip, new AnimationClipSettings { loopTime = tag.isRepeating });
+            AddRendererEnabledKeyframe(clip, componentType, false);
+            return clip;
         }
 
         static bool LayerHasContentInTag(Layer layer, Tag tag)
@@ -188,17 +226,12 @@ namespace UnityEditor.U2D.Aseprite
                     if (foundCell)
                         continue;
 
-                    foreach (var linkedCell in linkedCells)
+                    foreach (var cell in linkedCells)
                     {
-                        if (linkedCell.frameIndex != frameIndex)
+                        if (cell.frameIndex != frameIndex)
                             continue;
-                        // Only count as covered if the source frame has an actual cell —
-                        // mirrors AddLinkedCellsToClip which skips links with no source cell.
-                        if (cells.Any(c => c.frameIndex == linkedCell.linkedToFrame))
-                        {
-                            foundCell = true;
-                            break;
-                        }
+                        foundCell = true;
+                        break;
                     }
 
                     if (!foundCell)
