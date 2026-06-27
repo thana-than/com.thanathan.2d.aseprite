@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -187,12 +188,17 @@ namespace UnityEditor.U2D.Aseprite
                     if (foundCell)
                         continue;
 
-                    foreach (var cell in linkedCells)
+                    foreach (var linkedCell in linkedCells)
                     {
-                        if (cell.frameIndex != frameIndex)
+                        if (linkedCell.frameIndex != frameIndex)
                             continue;
-                        foundCell = true;
-                        break;
+                        // Only count as covered if the source frame has an actual cell —
+                        // mirrors AddLinkedCellsToClip which skips links with no source cell.
+                        if (cells.Any(c => c.frameIndex == linkedCell.linkedToFrame))
+                        {
+                            foundCell = true;
+                            break;
+                        }
                     }
 
                     if (!foundCell)
