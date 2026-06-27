@@ -1,1 +1,24 @@
-{"name":"com.unity.2d.aseprite","version":"3.0.2","unity":"6000.3","unityRelease":"0a2","displayName":"2D Aseprite Importer","description":"2D Aseprite Importer is a package which enables the import of .aseprite files from the Pixel Art tool Aseprite.","keywords":["2d","Aseprite","Pixel","Art","assetimporter"],"category":"2D","dependencies":{"com.unity.2d.sprite":"1.0.0","com.unity.2d.tilemap":"1.0.0","com.unity.2d.common":"12.0.3","com.unity.mathematics":"1.2.6","com.unity.modules.animation":"1.0.0"},"relatedPackages":{"com.unity.2d.aseprite.tests":"3.0.2"},"repository":{"revision":"1c0d005509ddec9deb2799abc968db66924c087e","type":"git","url":"https://github.cds.internal.unity3d.com/unity/2d.git"},"documentationUrl":"https://docs.unity3d.com/Packages/com.unity.2d.aseprite@3.0/manual/index.html","_upm":{"changelog":"### Fixed\n- Reduced the size of the buttons in the Export asset window. (UUM-132863)\n- Fixed an issue where the editor would display errors when reverting changes to the Import Mode in the inspector. (UUM-132892)\n- Fixed an issue where changes to the Pivot Alignment in the inspector could not be reverted. (UUM-132868)\n- Fixed an issue where new lines and white spaces would create unusable animation events. (UUM-133339)\n- Fixed an issue where you could not change an Aseprite file containing tile data to AnimatedSprite import mode. (UUM-135150)\n\n### Changed\n- Align online documentation URLs: package docs to @3.0; Unity Manual/Script Reference links to Unity 6000.3."}}
+{
+  "name": "com.thanathan.2d.aseprite",
+  "version": "3.0.2-than.1",
+  "unity": "6000.3",
+  "unityRelease": "0a2",
+  "displayName": "2D Aseprite Importer (Than Fork)",
+  "description": "Fork of Unity's 2D Aseprite Importer with increased capabilities for direct usability with an Aseprite file. Not affiliated with Unity Technologies.",
+  "keywords": ["2d", "Aseprite", "Pixel", "Art", "assetimporter"],
+  "category": "2D",
+  "author": { "name": "Than More", "url": "https://thanathan.com" },
+  "license": "SEE LICENSE IN LICENSE.md",
+  "dependencies": {
+    "com.unity.2d.sprite": "1.0.0",
+    "com.unity.2d.tilemap": "1.0.0",
+    "com.unity.2d.common": "12.0.3",
+    "com.unity.mathematics": "1.2.6",
+    "com.unity.modules.animation": "1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thana-than/com.thanathan.2d.aseprite.git"
+  },
+  "documentationUrl": "https://github.com/thana-than/com.thanathan.2d.aseprite#readme"
+}
