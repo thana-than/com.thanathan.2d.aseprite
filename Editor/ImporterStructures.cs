@@ -363,7 +363,11 @@ namespace UnityEditor.U2D.Aseprite
         /// <summary>
         /// All layers per frame are merged into one Sprite.
         /// </summary>
-        MergeFrame
+        MergeFrame,
+        /// <summary>
+        /// Only top-level layers (and groups) are each merged into one Sprite.
+        /// </summary>
+        ShallowMerge
     }
 
     /// <summary>

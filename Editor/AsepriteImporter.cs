@@ -627,6 +627,11 @@ namespace UnityEditor.U2D.Aseprite
                 CellTasks.CollectDataFromCells(cells, out imageBuffers, out imageSizes);
                 CellTasks.FlipCellBuffers(imageBuffers, imageSizes);
             }
+            else if (layerImportMode == LayerImportModes.ShallowMerge)
+            {
+                ImportShallowMerge.Import(newLayers, out imageBuffers, out imageSizes);
+                isIndividual = true;
+            }
             else
             {
                 var assetName = System.IO.Path.GetFileNameWithoutExtension(assetPath);
