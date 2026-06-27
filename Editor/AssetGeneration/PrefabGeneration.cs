@@ -16,6 +16,7 @@ namespace UnityEditor.U2D.Aseprite
             Dictionary<int, GameObject> layerIdToGameObject,
             Vector2Int canvasSize,
             AsepriteImporterSettings importSettings,
+            IReadOnlyList<Tag> tags,
             ref UnityEngine.Object mainAsset,
             out GameObject rootGameObject)
         {
@@ -44,10 +45,11 @@ namespace UnityEditor.U2D.Aseprite
             int start = importSettings.generateAnimationImageTarget ? 0 : layers.Count - 1;
             int end = importSettings.generateAnimationImageTarget ? layers.Count : -1;
             int step = importSettings.generateAnimationImageTarget ? 1 : -1;
+            var firstTag = tags != null && tags.Count > 0 ? tags[0] : null;
             for (var i = start; i != end; i += step)
             {
                 var layer = layers[i];
-                SetupLayerGameObject(layer, layerIdToGameObject, output.sprites, importSettings, canvasSize);
+                SetupLayerGameObject(layer, layerIdToGameObject, output.sprites, importSettings, canvasSize, firstTag);
 
                 if (layer.parentIndex == -1)
                     continue;
@@ -82,12 +84,24 @@ namespace UnityEditor.U2D.Aseprite
             }
         }
 
+        static bool LayerHasContentInTag(Layer layer, Tag tag)
+        {
+            foreach (var cell in layer.cells)
+                if (cell.frameIndex >= tag.fromFrame && cell.frameIndex < tag.toFrame)
+                    return true;
+            foreach (var lc in layer.linkedCells)
+                if (lc.frameIndex >= tag.fromFrame && lc.frameIndex < tag.toFrame)
+                    return true;
+            return false;
+        }
+
         static void SetupLayerGameObject(
             Layer layer,
             Dictionary<int, GameObject> layerIdToGameObject,
             Sprite[] sprites,
             AsepriteImporterSettings importSettings,
-            Vector2Int canvasSize)
+            Vector2Int canvasSize,
+            Tag firstTag = null)
         {
             if (layer.cells.Count == 0)
                 return;
@@ -95,11 +109,13 @@ namespace UnityEditor.U2D.Aseprite
             var firstCell = layer.cells[0];
             var gameObject = layerIdToGameObject[layer.index];
             var sprite = Array.Find(sprites, x => x.GetSpriteID() == firstCell.spriteId);
+            var startEnabled = firstTag == null || LayerHasContentInTag(layer, firstTag);
 
             if (importSettings.generateAnimationImageTarget)
             {
                 var image = gameObject.AddComponent<Image>();
                 image.sprite = sprite;
+                image.enabled = startEnabled;
 
                 var rt = gameObject.GetComponent<RectTransform>();
                 if (sprite != null)
@@ -120,6 +136,7 @@ namespace UnityEditor.U2D.Aseprite
             {
                 var sr = gameObject.AddComponent<SpriteRenderer>();
                 sr.sprite = sprite;
+                sr.enabled = startEnabled;
                 sr.sortingOrder = layer.index + firstCell.additiveSortOrder;
 #if ENABLE_URP
                 if (importSettings.addShadowCasters)

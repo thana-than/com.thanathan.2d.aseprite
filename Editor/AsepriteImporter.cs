@@ -1166,6 +1166,7 @@ namespace UnityEditor.U2D.Aseprite
                 m_LayerIdToGameObject,
                 m_CanvasSize,
                 m_AsepriteImporterSettings,
+                m_Tags,
                 ref mainAsset,
                 out m_RootGameObject);
         }
