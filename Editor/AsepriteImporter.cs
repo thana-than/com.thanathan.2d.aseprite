@@ -757,7 +757,7 @@ namespace UnityEditor.U2D.Aseprite
         static (string, object)[] ExtractEventDataFromCells(FrameData frameData)
         {
             var chunks = frameData.chunks;
-            var eventData = new List<(string, object)>();
+            var eventData = new HashSet<(string, object)>();
             for (var i = 0; i < chunks.Count; ++i)
             {
                 if (chunks[i].chunkType != ChunkTypes.Cell)
@@ -799,7 +799,9 @@ namespace UnityEditor.U2D.Aseprite
                 }
             }
 
-            return eventData.ToArray();
+            var eventArr = new (string, object)[eventData.Count];
+            eventData.CopyTo(eventArr);
+            return eventArr;
         }
 
         static List<Tag> ExtractTagsData(AsepriteFile file)
@@ -1156,8 +1158,6 @@ namespace UnityEditor.U2D.Aseprite
                 return;
             if (m_AsepriteImporterSettings.fileImportMode != FileImportModes.AnimatedSprite)
                 return;
-
-            m_LayerIdToGameObject.Clear();
 
             PrefabGeneration.Generate(
                 ctx,
