@@ -22,8 +22,6 @@ namespace UnityEditor.U2D.Aseprite
             if (animationClips.Count == 0)
                 return;
 
-            animationClips.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
-
             var controller = new AnimatorController();
             controller.name = assetName;
             controller.AddLayer("Base Layer");
