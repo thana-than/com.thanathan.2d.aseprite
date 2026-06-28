@@ -113,7 +113,7 @@ namespace UnityEditor.U2D.Aseprite
                         image = output.image,
                         frameIndex = frameIndex,
                         name = ImportUtilities.GetCellName(cellName, frameIndex, cellsPerFrame.Count, true),
-                        spriteId = new GUID(Hash128.Compute($"{cellName}_{frameIndex}").ToString())
+                        spriteId = GUID.Generate()
                     };
                     mergedCells.Add(mergedCell);
 
