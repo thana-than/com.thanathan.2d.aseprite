@@ -554,7 +554,7 @@ namespace UnityEditor.U2D.Aseprite
                             cell.image = cellChunk.image;
                             cell.additiveSortOrder = cellChunk.zIndex;
                             cell.name = layer.name;
-                            cell.spriteId = GUID.Generate();
+                            cell.spriteId = new GUID(Hash128.Compute($"{layer.uuid}_{cell.frameIndex}").ToString());
 
                             var opacity = cell.opacity * layer.opacity;
                             if ((1f - opacity) > Mathf.Epsilon)
@@ -878,7 +878,7 @@ namespace UnityEditor.U2D.Aseprite
                             tileId = j,
                             image = tileImage,
                             size = tileSize,
-                            spriteId = GUID.Generate(),
+                            spriteId = new GUID(Hash128.Compute($"{tileSetName}_{j}").ToString()),
                             name = $"{tileSetName}_{j}"
                         };
                         tiles.Add(tile);
