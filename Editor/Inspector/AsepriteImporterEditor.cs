@@ -68,6 +68,7 @@ namespace UnityEditor.U2D.Aseprite
         SerializedProperty m_SpritePadding;
 
         SerializedProperty m_GenerateModelPrefab;
+        SerializedProperty m_PreserveGroupHierarchy;
         SerializedProperty m_AddSortingGroup;
         SerializedProperty m_AddShadowCasters;
         SerializedProperty m_GenerateAnimationClips;
@@ -220,6 +221,7 @@ namespace UnityEditor.U2D.Aseprite
             m_SpritePadding = asepriteImporterSettings.FindPropertyRelative("m_SpritePadding");
 
             m_GenerateModelPrefab = asepriteImporterSettings.FindPropertyRelative("m_GenerateModelPrefab");
+            m_PreserveGroupHierarchy = asepriteImporterSettings.FindPropertyRelative("m_PreserveGroupHierarchy");
             m_AddSortingGroup = asepriteImporterSettings.FindPropertyRelative("m_AddSortingGroup");
             m_AddShadowCasters = asepriteImporterSettings.FindPropertyRelative("m_AddShadowCasters");
             m_GenerateAnimationClips = asepriteImporterSettings.FindPropertyRelative("m_GenerateAnimationClips");
@@ -569,6 +571,33 @@ namespace UnityEditor.U2D.Aseprite
             };
             generateModelField.Bind(serializedObject);
             parent.Add(generateModelField);
+
+            // Preserve group hierarchy (ShallowMerge + #EXPAND groups become empty transforms)
+            var isPreserveGroupEnabled = m_GenerateModelPrefab.boolValue
+                && (LayerImportModes)m_LayerImportMode.intValue == LayerImportModes.ShallowMerge;
+            var isPreserveGroupVisible = (LayerImportModes)m_LayerImportMode.intValue == LayerImportModes.ShallowMerge;
+            var preserveGroupHierarchyField = new PropertyField(m_PreserveGroupHierarchy, "Preserve Group Hierarchy")
+            {
+                tooltip = "When enabled, group layers tagged with #EXPAND or #EXP in Aseprite become empty transforms in the prefab hierarchy instead of being discarded.",
+                visible = isPreserveGroupVisible
+            };
+            preserveGroupHierarchyField.Bind(serializedObject);
+            preserveGroupHierarchyField.AddToClassList(k_SubElementUssClass);
+            preserveGroupHierarchyField.EnableInClassList(k_HiddenElementUssClass, !isPreserveGroupVisible);
+            preserveGroupHierarchyField.SetEnabled(isPreserveGroupEnabled);
+            preserveGroupHierarchyField.schedule.Execute(() =>
+            {
+                var shouldShow = (LayerImportModes)m_LayerImportMode.intValue == LayerImportModes.ShallowMerge;
+                if (preserveGroupHierarchyField.visible != shouldShow)
+                {
+                    preserveGroupHierarchyField.visible = shouldShow;
+                    preserveGroupHierarchyField.EnableInClassList(k_HiddenElementUssClass, !shouldShow);
+                }
+                var isEnabled = m_GenerateModelPrefab.boolValue && shouldShow;
+                if (preserveGroupHierarchyField.enabledSelf != isEnabled)
+                    preserveGroupHierarchyField.SetEnabled(isEnabled);
+            }).Every(k_PollForChangesInternal);
+            parent.Add(preserveGroupHierarchyField);
 
             // Add "sorting group"-component
             var isSortingEnabled = m_GenerateModelPrefab.boolValue;

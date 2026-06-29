@@ -33,12 +33,17 @@ namespace UnityEditor.U2D.Aseprite
                     rootGameObject.AddComponent<SortingGroup>();
             }
 
+            // Group layers from #EXPAND are preserved in the hierarchy only when explicitly requested
+            // (or when not in ShallowMerge mode, where group layers are always part of the output).
+            var preserveGroups = importSettings.layerImportMode != LayerImportModes.ShallowMerge
+                || importSettings.preserveGroupHierarchy;
+
             if (layers.Count == 1)
             {
                 layerIdToGameObject.Add(layers[0].index, rootGameObject);
             }
             else
-                CreateLayerHierarchy(layers, layerIdToGameObject, rootGameObject, importSettings.generateAnimationImageTarget);
+                CreateLayerHierarchy(layers, layerIdToGameObject, rootGameObject, importSettings.generateAnimationImageTarget, preserveGroups);
 
             // UI Image renders in sibling order (higher index = in front), opposite of SpriteRenderer sorting.
             // Iterate forward for UI so layer[0] (Aseprite bottom) gets sibling index 0 (renders behind).
@@ -49,12 +54,20 @@ namespace UnityEditor.U2D.Aseprite
             for (var i = start; i != end; i += step)
             {
                 var layer = layers[i];
+
+                if (!preserveGroups && layer.layerType == LayerTypes.Group)
+                    continue;
+
                 SetupLayerGameObject(layer, layerIdToGameObject, output.sprites, importSettings, canvasSize, firstTag);
 
                 if (layer.parentIndex == -1)
                     continue;
 
-                var parentGo = layerIdToGameObject[layer.parentIndex];
+                // Use TryGetValue so that group layers skipped above don't cause a KeyNotFoundException;
+                // the child simply stays under Root when its group parent has no GameObject.
+                if (!layerIdToGameObject.TryGetValue(layer.parentIndex, out var parentGo))
+                    continue;
+
                 layerIdToGameObject[layer.index].transform.parent = parentGo.transform;
             }
 
@@ -69,7 +82,7 @@ namespace UnityEditor.U2D.Aseprite
                 rootGameObject.hideFlags = HideFlags.HideAndDontSave;
         }
 
-        static void CreateLayerHierarchy(List<Layer> layers, Dictionary<int, GameObject> layerIdToGameObject, GameObject root, bool uiOrder = false)
+        static void CreateLayerHierarchy(List<Layer> layers, Dictionary<int, GameObject> layerIdToGameObject, GameObject root, bool uiOrder = false, bool preserveGroups = true)
         {
             int start = uiOrder ? 0 : layers.Count - 1;
             int end = uiOrder ? layers.Count : -1;
@@ -77,6 +90,8 @@ namespace UnityEditor.U2D.Aseprite
             for (var i = start; i != end; i += step)
             {
                 var layer = layers[i];
+                if (!preserveGroups && layer.layerType == LayerTypes.Group)
+                    continue;
                 var go = new GameObject(layer.name);
                 go.transform.parent = root.transform;
                 go.transform.localRotation = Quaternion.identity;

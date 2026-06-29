@@ -9,8 +9,12 @@ namespace UnityEditor.U2D.Aseprite
     internal static class ImportShallowMerge
     {
         /// <summary>
-        /// Flattens the layer list in place: group layers are merged into a single sprite per frame,
-        /// while top-level normal layers are passed through as-is.
+        /// Flattens the layer list in place.
+        /// - Top-level normal layers pass through unchanged.
+        /// - Top-level group layers without #EXPAND/#EXP are merged into a single sprite per frame.
+        /// - Top-level group layers tagged #EXPAND/#EXP are expanded: their direct children are
+        ///   processed recursively with the same rules, and the group itself becomes an empty
+        ///   container layer (LayerTypes.Group, no cells) in the output.
         /// </summary>
         public static void Import(List<Layer> layers, out List<NativeArray<Color32>> cellBuffers, out List<int2> cellSizes)
         {
@@ -21,9 +25,14 @@ namespace UnityEditor.U2D.Aseprite
             foreach (var layer in layers.Where(l => l.parentIndex == -1))
             {
                 if (layer.layerType == LayerTypes.Group)
-                    MergeGroupLayer(layer, layers, outputLayers, cellBuffers, cellSizes);
+                {
+                    if (LayerTagParser.HasTag(layer.name, LayerTag.Expand))
+                        ExpandGroupLayer(layer, layers, -1, outputLayers, cellBuffers, cellSizes);
+                    else
+                        MergeGroupLayer(layer, layers, -1, outputLayers, cellBuffers, cellSizes);
+                }
                 else if (layer.layerType == LayerTypes.Normal)
-                    CollectNormalLayer(layer, outputLayers, cellBuffers, cellSizes);
+                    CollectNormalLayer(layer, -1, outputLayers, cellBuffers, cellSizes);
             }
 
             layers.Clear();
@@ -31,10 +40,43 @@ namespace UnityEditor.U2D.Aseprite
         }
 
         /// <summary>
+        /// Expands an #EXPAND-tagged group: emits an empty Group layer as a hierarchy container,
+        /// then processes each direct child with the same merge/expand/collect rules.
+        /// </summary>
+        static void ExpandGroupLayer(Layer group, List<Layer> allLayers, int parentOutputIndex,
+            List<Layer> outputLayers, List<NativeArray<Color32>> cellBuffers, List<int2> cellSizes)
+        {
+            var groupLayer = new Layer
+            {
+                layerType = LayerTypes.Group,
+                index = outputLayers.Count,
+                name = LayerTagParser.StripTag(group.name, LayerTag.Expand),
+                parentIndex = parentOutputIndex,
+                uuid = group.uuid
+            };
+            outputLayers.Add(groupLayer);
+            // No cell buffers added — group layer carries no sprite.
+
+            var groupOutputIndex = groupLayer.index;
+            foreach (var child in GetDirectChildren(group.index, allLayers))
+            {
+                if (child.layerType == LayerTypes.Normal)
+                    CollectNormalLayer(child, groupOutputIndex, outputLayers, cellBuffers, cellSizes);
+                else if (child.layerType == LayerTypes.Group)
+                {
+                    if (LayerTagParser.HasTag(child.name, LayerTag.Expand))
+                        ExpandGroupLayer(child, allLayers, groupOutputIndex, outputLayers, cellBuffers, cellSizes);
+                    else
+                        MergeGroupLayer(child, allLayers, groupOutputIndex, outputLayers, cellBuffers, cellSizes);
+                }
+            }
+        }
+
+        /// <summary>
         /// Merges all descendant normal layers into a single output layer, preserving shared linked-cell relationships.
         /// </summary>
-        static void MergeGroupLayer(Layer group, List<Layer> allLayers, List<Layer> outputLayers,
-            List<NativeArray<Color32>> cellBuffers, List<int2> cellSizes)
+        static void MergeGroupLayer(Layer group, List<Layer> allLayers, int parentOutputIndex,
+            List<Layer> outputLayers, List<NativeArray<Color32>> cellBuffers, List<int2> cellSizes)
         {
             var descendants = GetDescendantNormalLayers(group.index, allLayers);
             if (descendants.Count == 0) return;
@@ -56,7 +98,7 @@ namespace UnityEditor.U2D.Aseprite
                 cells = mergedCells,
                 index = outputLayers.Count,
                 name = group.name,
-                parentIndex = -1,
+                parentIndex = parentOutputIndex,
                 uuid = group.uuid
             };
 
@@ -72,8 +114,8 @@ namespace UnityEditor.U2D.Aseprite
         /// <summary>
         /// Passes a normal layer through unchanged, collecting its cell buffers.
         /// </summary>
-        static void CollectNormalLayer(Layer layer, List<Layer> outputLayers,
-            List<NativeArray<Color32>> cellBuffers, List<int2> cellSizes)
+        static void CollectNormalLayer(Layer layer, int parentOutputIndex,
+            List<Layer> outputLayers, List<NativeArray<Color32>> cellBuffers, List<int2> cellSizes)
         {
             CellTasks.GetCellsFromLayers(new List<Layer> { layer }, out var cells);
             CellTasks.CollectDataFromCells(cells, out var buffers, out var sizes);
@@ -81,13 +123,14 @@ namespace UnityEditor.U2D.Aseprite
             cellBuffers.AddRange(buffers);
             cellSizes.AddRange(sizes);
 
+            layer.parentIndex = parentOutputIndex;
             layer.index = outputLayers.Count;
             outputLayers.Add(layer);
         }
 
         /// <summary>
         /// Builds a map of linkedFrames for frames that produce identical merged output.
-        /// Includes linking group frames when descendants share an identical links.
+        /// Includes linking group frames when descendants share identical links.
         /// </summary>
         static Dictionary<int, int> ComputeGroupLinkMap(List<Layer> descendants)
         {
@@ -133,6 +176,20 @@ namespace UnityEditor.U2D.Aseprite
             {
                 if (!linkMap.ContainsKey(kv.Key))
                     result[kv.Key] = kv.Value;
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Returns the immediate children of <paramref name="parentIndex"/> in <paramref name="allLayers"/>.
+        /// </summary>
+        static List<Layer> GetDirectChildren(int parentIndex, List<Layer> allLayers)
+        {
+            var result = new List<Layer>();
+            foreach (var layer in allLayers)
+            {
+                if (layer.parentIndex == parentIndex)
+                    result.Add(layer);
             }
             return result;
         }
