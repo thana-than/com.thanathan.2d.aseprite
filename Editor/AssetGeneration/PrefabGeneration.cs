@@ -92,7 +92,9 @@ namespace UnityEditor.U2D.Aseprite
                 var layer = layers[i];
                 if (!preserveGroups && layer.layerType == LayerTypes.Group)
                     continue;
-                var go = new GameObject(layer.name);
+                var go = uiOrder
+                    ? new GameObject(layer.name, typeof(RectTransform))
+                    : new GameObject(layer.name);
                 go.transform.parent = root.transform;
                 go.transform.localRotation = Quaternion.identity;
                 layerIdToGameObject.Add(layer.index, go);
