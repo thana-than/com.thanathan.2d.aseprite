@@ -126,7 +126,6 @@ namespace UnityEditor.U2D.Aseprite
                         var clip = CreateLayerClip(
                             tags[i], clipName,
                             layer, frames, sprites, generateIndividualEvents, generateAnimationImageTarget);
-                        AddRendererEnabledKeyframe(clip, componentType, true);
                         layerClips.Add(clip);
                     }
                     else
@@ -188,13 +187,16 @@ namespace UnityEditor.U2D.Aseprite
             var componentType = generateAnimationImageTarget ? typeof(Image) : typeof(SpriteRenderer);
 
             var spriteKeyframes = new List<ObjectReferenceKeyframe>();
-            AddCellsToClip(layer.cells, tag, sprites, frames, spriteKeyframes);
-            AddLinkedCellsToClip(layer.linkedCells, layer.cells, tag, sprites, frames, spriteKeyframes);
+            var activeFrames = AddCellsToClip(layer.cells, tag, sprites, frames, spriteKeyframes);
+            activeFrames.UnionWith(AddLinkedCellsToClip(layer.linkedCells, layer.cells, tag, sprites, frames, spriteKeyframes));
             spriteKeyframes.Sort((x, y) => x.time.CompareTo(y.time));
             DuplicateLastFrame(spriteKeyframes, frames[tag.toFrame - 1], animationClip.frameRate);
 
             var spriteBinding = EditorCurveBinding.PPtrCurve("", componentType, "m_Sprite");
             AnimationUtility.SetObjectReferenceCurve(animationClip, spriteBinding, spriteKeyframes.ToArray());
+
+            AddRendererEnabledKeyframe(animationClip, componentType, true);
+            AddEnabledKeyframes("", tag, frames, false, activeFrames, animationClip, componentType);
 
             AddAnimationEvents(tag, frames, animationClip, generateIndividualEvents);
 
@@ -424,10 +426,14 @@ namespace UnityEditor.U2D.Aseprite
 
         static void AddEnabledKeyframes(Transform layerTransform, Tag tag, IReadOnlyList<Frame> frames, bool doesLayerDisableRenderer, IReadOnlyCollection<int> activeFrames, AnimationClip animationClip, System.Type componentType)
         {
+            AddEnabledKeyframes(GetTransformPath(layerTransform), tag, frames, doesLayerDisableRenderer, activeFrames, animationClip, componentType);
+        }
+
+        static void AddEnabledKeyframes(string path, Tag tag, IReadOnlyList<Frame> frames, bool doesLayerDisableRenderer, IReadOnlyCollection<int> activeFrames, AnimationClip animationClip, System.Type componentType)
+        {
             if (activeFrames.Count == tag.noOfFrames && !doesLayerDisableRenderer)
                 return;
 
-            var path = GetTransformPath(layerTransform);
             var enabledBinding = EditorCurveBinding.FloatCurve(path, componentType, "m_Enabled");
             var enabledKeyframes = new List<Keyframe>();
 
