@@ -465,7 +465,7 @@ namespace UnityEditor.U2D.Aseprite
             if (activeFrames.Contains(tag.fromFrame))
             {
                 var keyframe = GetBoolKeyFrame(true, 0f);
-                enabledKeyframes.Add(keyframe);
+                enabledKeyframes.Insert(0, keyframe);
             }
 
             var animCurve = new AnimationCurve(enabledKeyframes.ToArray());
