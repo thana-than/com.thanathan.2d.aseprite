@@ -164,6 +164,12 @@ namespace UnityEditor.U2D.Aseprite
             set => m_AsepriteImporterSettings.customPivotPosition = value;
         }
 
+        public bool pixelPerfectPivot
+        {
+            get => m_AsepriteImporterSettings.pixelPerfectPivot;
+            set => m_AsepriteImporterSettings.pixelPerfectPivot = value;
+        }
+
         /// <summary>
         /// External padding between each SpriteRect, in pixels.
         /// </summary>

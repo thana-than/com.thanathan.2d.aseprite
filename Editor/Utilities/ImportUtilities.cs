@@ -231,6 +231,16 @@ namespace UnityEditor.U2D.Aseprite
             return pivot;
         }
 
+        public static float2 SnapPivotToPixel(float2 pivot, RectInt spriteRect)
+        {
+            if (spriteRect.width == 0 || spriteRect.height == 0)
+                return pivot;
+
+            return new float2(
+                math.floor(pivot.x * spriteRect.width + 0.5f) / spriteRect.width,
+                math.floor(pivot.y * spriteRect.height + 0.5f) / spriteRect.height);
+        }
+
         public static float2 PivotAlignmentToVector(SpriteAlignment alignment)
         {
             switch (alignment)

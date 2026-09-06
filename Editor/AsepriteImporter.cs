@@ -14,7 +14,7 @@ namespace UnityEditor.U2D.Aseprite
     /// ScriptedImporter to import Aseprite files
     /// </summary>
     // Version using unity release + 5 digit padding for future upgrade. Eg 2021.2 -> 21200000
-    [ScriptedImporter(21300004, new string[] { "aseprite", "ase" }, AllowCaching = true)]
+    [ScriptedImporter(21300005, new string[] { "aseprite", "ase" }, AllowCaching = true)]
     [HelpURL("https://docs.unity3d.com/Packages/com.unity.2d.aseprite@3.0")]
     public partial class AsepriteImporter : ScriptedImporter, ISpriteEditorDataProvider
     {
@@ -82,6 +82,7 @@ namespace UnityEditor.U2D.Aseprite
             defaultPivotAlignment = SpriteAlignment.BottomCenter,
             defaultPivotSpace = PivotSpaces.Canvas,
             customPivotPosition = new Vector2(0.5f, 0.5f),
+            pixelPerfectPivot = true,
             mosaicPadding = 4,
             spritePadding = 0,
             generateAnimationClips = true,
@@ -379,6 +380,11 @@ namespace UnityEditor.U2D.Aseprite
             {
                 foreach (var layer in m_AsepriteLayers)
                     layer.uuid = new UUID((uint)layer.guid, 0, 0, 0);
+                m_ImporterVersion++;
+            }
+            if (m_ImporterVersion == 2)
+            {
+                m_AsepriteImporterSettings.pixelPerfectPivot = true;
                 m_ImporterVersion++;
             }
         }
@@ -972,6 +978,7 @@ namespace UnityEditor.U2D.Aseprite
                    (pivotAlignment != m_PreviousAsepriteImporterSettings.defaultPivotAlignment ||
                     pivotSpace != m_PreviousAsepriteImporterSettings.defaultPivotSpace ||
                     customPivotPosition != m_PreviousAsepriteImporterSettings.customPivotPosition ||
+                    pixelPerfectPivot != m_PreviousAsepriteImporterSettings.pixelPerfectPivot ||
                     spritePadding != m_PreviousAsepriteImporterSettings.spritePadding);
         }
 
@@ -1009,7 +1016,7 @@ namespace UnityEditor.U2D.Aseprite
                 pivot.y *= scaleY;
 
                 spriteData.alignment = SpriteAlignment.Custom;
-                spriteData.pivot = pivot;
+                spriteData.pivot = pixelPerfectPivot ? ImportUtilities.SnapPivotToPixel(pivot, spriteRect) : pivot;
             }
             else if (pivotSpace == PivotSpaces.Canvas)
             {
@@ -1019,7 +1026,17 @@ namespace UnityEditor.U2D.Aseprite
                 cellRect.x += packOffset.x;
                 cellRect.y += packOffset.y;
 
-                spriteData.pivot = ImportUtilities.CalculateCellPivot(cellRect, spritePadding, canvasSize, pivotAlignment, customPivotPosition);
+                var canvasPivot = ImportUtilities.CalculateCellPivot(cellRect, spritePadding, canvasSize, pivotAlignment, customPivotPosition);
+                spriteData.pivot = pixelPerfectPivot ? ImportUtilities.SnapPivotToPixel(canvasPivot, cellRect) : canvasPivot;
+            }
+            else if (pixelPerfectPivot)
+            {
+                var localPivot = pivotAlignment == SpriteAlignment.Custom
+                    ? new float2(customPivotPosition.x, customPivotPosition.y)
+                    : ImportUtilities.PivotAlignmentToVector(pivotAlignment);
+
+                spriteData.alignment = SpriteAlignment.Custom;
+                spriteData.pivot = ImportUtilities.SnapPivotToPixel(localPivot, spriteRect);
             }
             else
             {

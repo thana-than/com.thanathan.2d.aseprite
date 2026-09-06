@@ -64,6 +64,7 @@ namespace UnityEditor.U2D.Aseprite
         SerializedProperty m_DefaultPivotSpace;
         SerializedProperty m_DefaultPivotAlignment;
         SerializedProperty m_CustomPivotPosition;
+        SerializedProperty m_PixelPerfectPivot;
         SerializedProperty m_MosaicPadding;
         SerializedProperty m_SpritePadding;
 
@@ -217,6 +218,7 @@ namespace UnityEditor.U2D.Aseprite
             m_DefaultPivotSpace = asepriteImporterSettings.FindPropertyRelative("m_DefaultPivotSpace");
             m_DefaultPivotAlignment = asepriteImporterSettings.FindPropertyRelative("m_DefaultPivotAlignment");
             m_CustomPivotPosition = asepriteImporterSettings.FindPropertyRelative("m_CustomPivotPosition");
+            m_PixelPerfectPivot = asepriteImporterSettings.FindPropertyRelative("m_PixelPerfectPivot");
             m_MosaicPadding = asepriteImporterSettings.FindPropertyRelative("m_MosaicPadding");
             m_SpritePadding = asepriteImporterSettings.FindPropertyRelative("m_SpritePadding");
 
@@ -462,6 +464,13 @@ namespace UnityEditor.U2D.Aseprite
                 }
             }).Every(k_PollForChangesInternal);
             foldOut.Add(customPivotField);
+
+            var pixelPerfectPivotField = new PropertyField(m_PixelPerfectPivot, styles.pixelPerfectPivot.text)
+            {
+                tooltip = styles.pixelPerfectPivot.tooltip
+            };
+            pixelPerfectPivotField.Bind(serializedObject);
+            foldOut.Add(pixelPerfectPivotField);
 
             var mosaicPaddingField = new PropertyField(m_MosaicPadding, styles.mosaicPadding.text)
             {
@@ -1743,6 +1752,7 @@ namespace UnityEditor.U2D.Aseprite
             public readonly GUIContent defaultPivotSpace = EditorGUIUtility.TrTextContent("Pivot Space", "Select which space the pivot should be calculated in.");
             public readonly GUIContent defaultPivotAlignment = EditorGUIUtility.TrTextContent("Pivot Alignment", "Select where the pivot should be located based on the Pivot Space.");
             public readonly GUIContent customPivotPosition = EditorGUIUtility.TrTextContent("Custom Pivot Position", "Input the normalized position of the Sprite pivots. The position will be calculated based on the Pivot Space.");
+            public readonly GUIContent pixelPerfectPivot = EditorGUIUtility.TrTextContent("Pixel Perfect Pivot", "Snap the calculated pivot to the nearest whole pixel. Prevents half-pixel sampling on Sprites whose pivot would otherwise land between texels.");
             public readonly GUIContent mosaicPadding = EditorGUIUtility.TrTextContent("Mosaic Padding", "External padding between each SpriteRect, in pixels.");
             public readonly GUIContent spritePadding = EditorGUIUtility.TrTextContent("Sprite Padding", "Internal padding within each SpriteRect, in pixels.");
 
