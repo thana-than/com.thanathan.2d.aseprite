@@ -155,6 +155,7 @@ namespace UnityEditor.U2D.Aseprite
                 sr.sprite = sprite;
                 sr.enabled = startEnabled;
                 sr.sortingOrder = layer.index + firstCell.additiveSortOrder;
+                sr.spriteSortPoint = importSettings.usePivotSortPoint ? SpriteSortPoint.Pivot : SpriteSortPoint.Center;
 #if ENABLE_URP
                 if (importSettings.addShadowCasters)
                     gameObject.AddComponent<UnityEngine.Rendering.Universal.ShadowCaster2D>();

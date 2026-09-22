@@ -91,7 +91,8 @@ namespace UnityEditor.U2D.Aseprite
             addShadowCasters = false,
             generateIndividualEvents = true,
             addUIComponents = true,
-            generateSpriteAtlas = true
+            generateSpriteAtlas = true,
+            usePivotSortPoint = true
         };
 
         [SerializeField] AsepriteImporterSettings m_PreviousAsepriteImporterSettings;
@@ -385,6 +386,11 @@ namespace UnityEditor.U2D.Aseprite
             if (m_ImporterVersion == 2)
             {
                 m_AsepriteImporterSettings.pixelPerfectPivot = true;
+                m_ImporterVersion++;
+            }
+            if (m_ImporterVersion == 3)
+            {
+                m_AsepriteImporterSettings.usePivotSortPoint = true;
                 m_ImporterVersion++;
             }
         }

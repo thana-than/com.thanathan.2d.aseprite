@@ -211,6 +211,19 @@ namespace UnityEditor.U2D.Aseprite
         }
 
         /// <summary>
+        /// Set the Sprite Sort Point of the generated Sprite Renderers to Pivot instead of Center.
+        /// </summary>
+        public bool usePivotSortPoint
+        {
+            get => m_AsepriteImporterSettings.usePivotSortPoint;
+            set
+            {
+                m_AsepriteImporterSettings.usePivotSortPoint = value;
+                SetDirty();
+            }
+        }
+
+        /// <summary>
         /// Add Shadow Casters to the generated GameObjects with SpriteRenderers.
         /// </summary>
         public bool addShadowCasters

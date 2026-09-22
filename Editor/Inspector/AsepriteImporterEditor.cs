@@ -71,6 +71,7 @@ namespace UnityEditor.U2D.Aseprite
         SerializedProperty m_GenerateModelPrefab;
         SerializedProperty m_PreserveGroupHierarchy;
         SerializedProperty m_AddSortingGroup;
+        SerializedProperty m_UsePivotSortPoint;
         SerializedProperty m_AddShadowCasters;
         SerializedProperty m_GenerateAnimationClips;
         SerializedProperty m_PrevGenerateAnimationClips;
@@ -225,6 +226,7 @@ namespace UnityEditor.U2D.Aseprite
             m_GenerateModelPrefab = asepriteImporterSettings.FindPropertyRelative("m_GenerateModelPrefab");
             m_PreserveGroupHierarchy = asepriteImporterSettings.FindPropertyRelative("m_PreserveGroupHierarchy");
             m_AddSortingGroup = asepriteImporterSettings.FindPropertyRelative("m_AddSortingGroup");
+            m_UsePivotSortPoint = asepriteImporterSettings.FindPropertyRelative("m_UsePivotSortPoint");
             m_AddShadowCasters = asepriteImporterSettings.FindPropertyRelative("m_AddShadowCasters");
             m_GenerateAnimationClips = asepriteImporterSettings.FindPropertyRelative("m_GenerateAnimationClips");
             m_GenerateIndividualEvents = asepriteImporterSettings.FindPropertyRelative("m_GenerateIndividualEvents");
@@ -624,6 +626,32 @@ namespace UnityEditor.U2D.Aseprite
                     sortingGroupField.SetEnabled(isSortingEnabled);
             }).Every(k_PollForChangesInternal);
             parent.Add(sortingGroupField);
+
+            // Sprite Sort Point on generated Sprite Renderers — irrelevant in image target mode
+            var isSortPointVisible = !m_GenerateAnimationImageTarget.boolValue;
+            var isSortPointEnabled = m_GenerateModelPrefab.boolValue && isSortPointVisible;
+            var sortPointField = new PropertyField(m_UsePivotSortPoint, styles.usePivotSortPoint.text)
+            {
+                tooltip = styles.usePivotSortPoint.tooltip,
+                visible = isSortPointVisible
+            };
+            sortPointField.Bind(serializedObject);
+            sortPointField.AddToClassList(k_SubElementUssClass);
+            sortPointField.EnableInClassList(k_HiddenElementUssClass, !isSortPointVisible);
+            sortPointField.SetEnabled(isSortPointEnabled);
+            sortPointField.schedule.Execute(() =>
+            {
+                var shouldShow = !m_GenerateAnimationImageTarget.boolValue;
+                if (sortPointField.visible != shouldShow)
+                {
+                    sortPointField.visible = shouldShow;
+                    sortPointField.EnableInClassList(k_HiddenElementUssClass, !shouldShow);
+                }
+                var isEnabled = m_GenerateModelPrefab.boolValue && shouldShow;
+                if (sortPointField.enabledSelf != isEnabled)
+                    sortPointField.SetEnabled(isEnabled);
+            }).Every(k_PollForChangesInternal);
+            parent.Add(sortPointField);
 
             // Add "shadow caster"-component
             var areShadowsEnabled = isUrpEnabled && m_GenerateModelPrefab.boolValue;
@@ -1775,6 +1803,7 @@ namespace UnityEditor.U2D.Aseprite
             public readonly GUIContent generateModelPrefab = EditorGUIUtility.TrTextContent("Model Prefab", "Generate a Model Prefab laid out the same way as inside Aseprite.");
 
             public readonly GUIContent addSortingGroup = EditorGUIUtility.TrTextContent("Sorting Group", "Add a Sorting Group component to the root of the generated model prefab if it has more than one Sprite Renderer.");
+            public readonly GUIContent usePivotSortPoint = EditorGUIUtility.TrTextContent("Pivot Sort Point", "Set the Sprite Sort Point of the generated Sprite Renderers to Pivot instead of Center.");
             public readonly GUIContent addShadowCasters = EditorGUIUtility.TrTextContent("Shadow Casters", "Add Shadow Casters on all GameObjects with SpriteRenderer. Note: The Universal Rendering Pipeline package has to be installed.");
             public readonly GUIContent addUIComponents = EditorGUIUtility.TrTextContent("UI Components", "Add ImageUseSpritePivot and ContentSizeFitter to each Image layer so pivot and size automatically match the sprite during animation.");
             public readonly GUIContent perLayerAnimators = EditorGUIUtility.TrTextContent("Per-Layer Animators", "Generate one AnimatorController and Animator per layer. Clips are prefixed with the layer name and only target that layer's own component.");
