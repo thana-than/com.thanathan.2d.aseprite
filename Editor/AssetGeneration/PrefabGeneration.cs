@@ -284,9 +284,13 @@ namespace UnityEditor.U2D.Aseprite
         static Vector3 CanvasPixelToLocalPosition(float2 canvasPixel, Vector2Int canvasSize, AsepriteImporterSettings importSettings, float pixelsPerUnit)
         {
             var globalPivot = ImportUtilities.PivotAlignmentToVector(importSettings.defaultPivotAlignment);
+            var origin = new float2(canvasSize.x * globalPivot.x, canvasSize.y * globalPivot.y);
+            if (importSettings.pixelPerfectPivot)
+                origin = math.floor(origin + 0.5f);
+
             return new Vector3(
-                (canvasPixel.x - canvasSize.x * globalPivot.x) / pixelsPerUnit,
-                (canvasPixel.y - canvasSize.y * globalPivot.y) / pixelsPerUnit,
+                (canvasPixel.x - origin.x) / pixelsPerUnit,
+                (canvasPixel.y - origin.y) / pixelsPerUnit,
                 0f);
         }
     }
