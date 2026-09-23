@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -51,6 +52,9 @@ namespace UnityEditor.U2D.Aseprite
             int end = importSettings.generateAnimationImageTarget ? layers.Count : -1;
             int step = importSettings.generateAnimationImageTarget ? 1 : -1;
             var firstTag = tags != null && tags.Count > 0 ? tags[0] : null;
+            var pixelsPerUnit = output.sprites is { Length: > 0 } ? output.sprites[0].pixelsPerUnit : 100f;
+            var groupAnchors = CalculateGroupAnchors(layers, layerIdToGameObject, importSettings);
+
             for (var i = start; i != end; i += step)
             {
                 var layer = layers[i];
@@ -58,7 +62,15 @@ namespace UnityEditor.U2D.Aseprite
                 if (!preserveGroups && layer.layerType == LayerTypes.Group)
                     continue;
 
-                SetupLayerGameObject(layer, layerIdToGameObject, output.sprites, importSettings, canvasSize, firstTag);
+                SetupLayerGameObject(layer, layerIdToGameObject, output.sprites, importSettings, canvasSize, groupAnchors, pixelsPerUnit, firstTag);
+            }
+
+            for (var i = start; i != end; i += step)
+            {
+                var layer = layers[i];
+
+                if (!preserveGroups && layer.layerType == LayerTypes.Group)
+                    continue;
 
                 if (layer.parentIndex == -1)
                     continue;
@@ -101,6 +113,94 @@ namespace UnityEditor.U2D.Aseprite
             }
         }
 
+        static Dictionary<int, float2> CalculateGroupAnchors(
+            List<Layer> layers,
+            Dictionary<int, GameObject> layerIdToGameObject,
+            AsepriteImporterSettings importSettings)
+        {
+            var anchors = new Dictionary<int, float2>();
+            if (!importSettings.balanceGroupPivots
+                || importSettings.defaultPivotSpace == PivotSpaces.Canvas
+                || importSettings.generateAnimationImageTarget)
+                return anchors;
+
+            foreach (var layer in layers)
+            {
+                if (layer.layerType != LayerTypes.Group || layer.cells.Count > 0)
+                    continue;
+                if (!layerIdToGameObject.ContainsKey(layer.index))
+                    continue;
+                if (!TryGetGroupContentBounds(layer, layers, out var bounds))
+                    continue;
+
+                anchors.Add(layer.index, CalculateAnchorInBounds(bounds, importSettings));
+            }
+
+            return anchors;
+        }
+
+        static bool TryGetGroupContentBounds(Layer group, List<Layer> layers, out RectInt bounds)
+        {
+            bounds = default;
+            var hasBounds = false;
+
+            foreach (var layer in layers)
+            {
+                if (layer.cells.Count == 0 || !IsDescendantOf(layer, group, layers))
+                    continue;
+
+                var rect = layer.cells[0].cellRect;
+                if (rect.width == 0 || rect.height == 0)
+                    continue;
+
+                if (!hasBounds)
+                {
+                    bounds = rect;
+                    hasBounds = true;
+                    continue;
+                }
+
+                var xMin = Mathf.Min(bounds.xMin, rect.xMin);
+                var yMin = Mathf.Min(bounds.yMin, rect.yMin);
+                var xMax = Mathf.Max(bounds.xMax, rect.xMax);
+                var yMax = Mathf.Max(bounds.yMax, rect.yMax);
+                bounds = new RectInt(xMin, yMin, xMax - xMin, yMax - yMin);
+            }
+
+            return hasBounds;
+        }
+
+        static bool IsDescendantOf(Layer layer, Layer group, List<Layer> layers)
+        {
+            var parentIndex = layer.parentIndex;
+            while (parentIndex != -1)
+            {
+                if (parentIndex == group.index)
+                    return true;
+
+                var parent = layers.Find(x => x.index == parentIndex);
+                if (parent == null)
+                    return false;
+                parentIndex = parent.parentIndex;
+            }
+
+            return false;
+        }
+
+        static float2 CalculateAnchorInBounds(RectInt bounds, AsepriteImporterSettings importSettings)
+        {
+            var alignment = importSettings.defaultPivotAlignment == SpriteAlignment.Custom
+                ? new float2(importSettings.customPivotPosition.x, importSettings.customPivotPosition.y)
+                : ImportUtilities.PivotAlignmentToVector(importSettings.defaultPivotAlignment);
+
+            if (importSettings.pixelPerfectPivot)
+                alignment = ImportUtilities.SnapPivotToPixel(alignment, bounds);
+
+            return new float2(
+                bounds.x + alignment.x * bounds.width,
+                bounds.y + alignment.y * bounds.height);
+        }
+
         static bool LayerHasContentInTag(Layer layer, Tag tag)
         {
             foreach (var cell in layer.cells)
@@ -118,8 +218,16 @@ namespace UnityEditor.U2D.Aseprite
             Sprite[] sprites,
             AsepriteImporterSettings importSettings,
             Vector2Int canvasSize,
+            IReadOnlyDictionary<int, float2> groupAnchors,
+            float pixelsPerUnit,
             Tag firstTag = null)
         {
+            if (groupAnchors.TryGetValue(layer.index, out var anchor))
+            {
+                layerIdToGameObject[layer.index].transform.localPosition = CanvasPixelToLocalPosition(anchor, canvasSize, importSettings, pixelsPerUnit);
+                return;
+            }
+
             if (layer.cells.Count == 0)
                 return;
 
@@ -167,21 +275,19 @@ namespace UnityEditor.U2D.Aseprite
             else
             {
                 var cellRect = firstCell.cellRect;
-                var position = new Vector3(cellRect.x, cellRect.y, 0f);
-
                 var pivot = sprite.pivot;
-                position.x += pivot.x;
-                position.y += pivot.y;
-
-                var globalPivot = ImportUtilities.PivotAlignmentToVector(importSettings.defaultPivotAlignment);
-                position.x -= (canvasSize.x * globalPivot.x);
-                position.y -= (canvasSize.y * globalPivot.y);
-
-                position.x /= sprite.pixelsPerUnit;
-                position.y /= sprite.pixelsPerUnit;
-
-                gameObject.transform.localPosition = position;
+                var canvasPixel = new float2(cellRect.x + pivot.x, cellRect.y + pivot.y);
+                gameObject.transform.localPosition = CanvasPixelToLocalPosition(canvasPixel, canvasSize, importSettings, sprite.pixelsPerUnit);
             }
+        }
+
+        static Vector3 CanvasPixelToLocalPosition(float2 canvasPixel, Vector2Int canvasSize, AsepriteImporterSettings importSettings, float pixelsPerUnit)
+        {
+            var globalPivot = ImportUtilities.PivotAlignmentToVector(importSettings.defaultPivotAlignment);
+            return new Vector3(
+                (canvasPixel.x - canvasSize.x * globalPivot.x) / pixelsPerUnit,
+                (canvasPixel.y - canvasSize.y * globalPivot.y) / pixelsPerUnit,
+                0f);
         }
     }
 }

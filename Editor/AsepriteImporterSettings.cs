@@ -139,6 +139,13 @@ namespace UnityEditor.U2D.Aseprite
             set => m_PreserveGroupHierarchy = value;
         }
 
+        [SerializeField] bool m_BalanceGroupPivots;
+        public bool balanceGroupPivots
+        {
+            get => m_BalanceGroupPivots;
+            set => m_BalanceGroupPivots = value;
+        }
+
         [SerializeField] bool m_UsePivotSortPoint;
         public bool usePivotSortPoint
         {
@@ -162,7 +169,7 @@ namespace UnityEditor.U2D.Aseprite
 
         public bool Equals(AsepriteImporterSettings other)
         {
-            return m_FileImportMode == other.m_FileImportMode && m_ImportHiddenLayers == other.m_ImportHiddenLayers && m_LayerImportMode == other.m_LayerImportMode && m_DefaultPivotSpace == other.m_DefaultPivotSpace && m_DefaultPivotAlignment == other.m_DefaultPivotAlignment && m_CustomPivotPosition.Equals(other.m_CustomPivotPosition) && m_MosaicPadding == other.m_MosaicPadding && m_SpritePadding == other.m_SpritePadding && m_GenerateModelPrefab == other.m_GenerateModelPrefab && m_GenerateAnimationClips == other.m_GenerateAnimationClips && m_AddSortingGroup == other.m_AddSortingGroup && m_AddShadowCasters == other.m_AddShadowCasters && m_GenerateIndividualEvents == other.m_GenerateIndividualEvents && m_PerLayerAnimators == other.m_PerLayerAnimators && m_GenerateAnimationImageTarget == other.m_GenerateAnimationImageTarget && m_AddUIComponents == other.m_AddUIComponents && m_GenerateSpriteAtlas == other.m_GenerateSpriteAtlas && m_PreserveGroupHierarchy == other.m_PreserveGroupHierarchy && m_PixelPerfectPivot == other.m_PixelPerfectPivot && m_UsePivotSortPoint == other.m_UsePivotSortPoint;
+            return m_FileImportMode == other.m_FileImportMode && m_ImportHiddenLayers == other.m_ImportHiddenLayers && m_LayerImportMode == other.m_LayerImportMode && m_DefaultPivotSpace == other.m_DefaultPivotSpace && m_DefaultPivotAlignment == other.m_DefaultPivotAlignment && m_CustomPivotPosition.Equals(other.m_CustomPivotPosition) && m_MosaicPadding == other.m_MosaicPadding && m_SpritePadding == other.m_SpritePadding && m_GenerateModelPrefab == other.m_GenerateModelPrefab && m_GenerateAnimationClips == other.m_GenerateAnimationClips && m_AddSortingGroup == other.m_AddSortingGroup && m_AddShadowCasters == other.m_AddShadowCasters && m_GenerateIndividualEvents == other.m_GenerateIndividualEvents && m_PerLayerAnimators == other.m_PerLayerAnimators && m_GenerateAnimationImageTarget == other.m_GenerateAnimationImageTarget && m_AddUIComponents == other.m_AddUIComponents && m_GenerateSpriteAtlas == other.m_GenerateSpriteAtlas && m_PreserveGroupHierarchy == other.m_PreserveGroupHierarchy && m_PixelPerfectPivot == other.m_PixelPerfectPivot && m_UsePivotSortPoint == other.m_UsePivotSortPoint && m_BalanceGroupPivots == other.m_BalanceGroupPivots;
         }
 
         public override bool Equals(object obj)
@@ -194,6 +201,7 @@ namespace UnityEditor.U2D.Aseprite
                 hashCode = (hashCode * 397) ^ m_PreserveGroupHierarchy.GetHashCode();
                 hashCode = (hashCode * 397) ^ m_PixelPerfectPivot.GetHashCode();
                 hashCode = (hashCode * 397) ^ m_UsePivotSortPoint.GetHashCode();
+                hashCode = (hashCode * 397) ^ m_BalanceGroupPivots.GetHashCode();
                 return hashCode;
             }
         }

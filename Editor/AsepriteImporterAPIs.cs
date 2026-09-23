@@ -211,6 +211,20 @@ namespace UnityEditor.U2D.Aseprite
         }
 
         /// <summary>
+        /// Give preserved group layers the pivot of their combined contents, so that their child layers sit close to zero.
+        /// Only applies when the Pivot Space is set to Layer.
+        /// </summary>
+        public bool balanceGroupPivots
+        {
+            get => m_AsepriteImporterSettings.balanceGroupPivots;
+            set
+            {
+                m_AsepriteImporterSettings.balanceGroupPivots = value;
+                SetDirty();
+            }
+        }
+
+        /// <summary>
         /// Set the Sprite Sort Point of the generated Sprite Renderers to Pivot instead of Center.
         /// </summary>
         public bool usePivotSortPoint

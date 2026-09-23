@@ -72,6 +72,7 @@ namespace UnityEditor.U2D.Aseprite
         SerializedProperty m_PreserveGroupHierarchy;
         SerializedProperty m_AddSortingGroup;
         SerializedProperty m_UsePivotSortPoint;
+        SerializedProperty m_BalanceGroupPivots;
         SerializedProperty m_AddShadowCasters;
         SerializedProperty m_GenerateAnimationClips;
         SerializedProperty m_PrevGenerateAnimationClips;
@@ -227,6 +228,7 @@ namespace UnityEditor.U2D.Aseprite
             m_PreserveGroupHierarchy = asepriteImporterSettings.FindPropertyRelative("m_PreserveGroupHierarchy");
             m_AddSortingGroup = asepriteImporterSettings.FindPropertyRelative("m_AddSortingGroup");
             m_UsePivotSortPoint = asepriteImporterSettings.FindPropertyRelative("m_UsePivotSortPoint");
+            m_BalanceGroupPivots = asepriteImporterSettings.FindPropertyRelative("m_BalanceGroupPivots");
             m_AddShadowCasters = asepriteImporterSettings.FindPropertyRelative("m_AddShadowCasters");
             m_GenerateAnimationClips = asepriteImporterSettings.FindPropertyRelative("m_GenerateAnimationClips");
             m_GenerateIndividualEvents = asepriteImporterSettings.FindPropertyRelative("m_GenerateIndividualEvents");
@@ -610,6 +612,33 @@ namespace UnityEditor.U2D.Aseprite
             }).Every(k_PollForChangesInternal);
             parent.Add(preserveGroupHierarchyField);
 
+            bool IsBalanceGroupPivotsVisible() => (PivotSpaces)m_DefaultPivotSpace.intValue != PivotSpaces.Canvas
+                && !m_GenerateAnimationImageTarget.boolValue;
+
+            var isBalanceVisible = IsBalanceGroupPivotsVisible();
+            var balanceGroupPivotsField = new PropertyField(m_BalanceGroupPivots, styles.balanceGroupPivots.text)
+            {
+                tooltip = styles.balanceGroupPivots.tooltip,
+                visible = isBalanceVisible
+            };
+            balanceGroupPivotsField.Bind(serializedObject);
+            balanceGroupPivotsField.AddToClassList(k_SubElementUssClass);
+            balanceGroupPivotsField.EnableInClassList(k_HiddenElementUssClass, !isBalanceVisible);
+            balanceGroupPivotsField.SetEnabled(m_GenerateModelPrefab.boolValue && isBalanceVisible);
+            balanceGroupPivotsField.schedule.Execute(() =>
+            {
+                var shouldShow = IsBalanceGroupPivotsVisible();
+                if (balanceGroupPivotsField.visible != shouldShow)
+                {
+                    balanceGroupPivotsField.visible = shouldShow;
+                    balanceGroupPivotsField.EnableInClassList(k_HiddenElementUssClass, !shouldShow);
+                }
+                var isEnabled = m_GenerateModelPrefab.boolValue && shouldShow;
+                if (balanceGroupPivotsField.enabledSelf != isEnabled)
+                    balanceGroupPivotsField.SetEnabled(isEnabled);
+            }).Every(k_PollForChangesInternal);
+            parent.Add(balanceGroupPivotsField);
+
             // Add "sorting group"-component
             var isSortingEnabled = m_GenerateModelPrefab.boolValue;
             var sortingGroupField = new PropertyField(m_AddSortingGroup, styles.addSortingGroup.text)
@@ -627,7 +656,6 @@ namespace UnityEditor.U2D.Aseprite
             }).Every(k_PollForChangesInternal);
             parent.Add(sortingGroupField);
 
-            // Sprite Sort Point on generated Sprite Renderers — irrelevant in image target mode
             var isSortPointVisible = !m_GenerateAnimationImageTarget.boolValue;
             var isSortPointEnabled = m_GenerateModelPrefab.boolValue && isSortPointVisible;
             var sortPointField = new PropertyField(m_UsePivotSortPoint, styles.usePivotSortPoint.text)
@@ -1803,6 +1831,7 @@ namespace UnityEditor.U2D.Aseprite
             public readonly GUIContent generateModelPrefab = EditorGUIUtility.TrTextContent("Model Prefab", "Generate a Model Prefab laid out the same way as inside Aseprite.");
 
             public readonly GUIContent addSortingGroup = EditorGUIUtility.TrTextContent("Sorting Group", "Add a Sorting Group component to the root of the generated model prefab if it has more than one Sprite Renderer.");
+            public readonly GUIContent balanceGroupPivots = EditorGUIUtility.TrTextContent("Balance Group Pivots", "Give preserved group layers the pivot of their combined contents, so that their child layers sit close to zero. Requires the Pivot Space to be set to Layer.");
             public readonly GUIContent usePivotSortPoint = EditorGUIUtility.TrTextContent("Pivot Sort Point", "Set the Sprite Sort Point of the generated Sprite Renderers to Pivot instead of Center.");
             public readonly GUIContent addShadowCasters = EditorGUIUtility.TrTextContent("Shadow Casters", "Add Shadow Casters on all GameObjects with SpriteRenderer. Note: The Universal Rendering Pipeline package has to be installed.");
             public readonly GUIContent addUIComponents = EditorGUIUtility.TrTextContent("UI Components", "Add ImageUseSpritePivot and ContentSizeFitter to each Image layer so pivot and size automatically match the sprite during animation.");
