@@ -180,8 +180,8 @@ namespace UnityEditor.U2D.Aseprite
             }
         }
 
-        List<Layer> DescendantNormalLayers(Layer layer, IReadOnlyList<Layer> layers) =>
-            SelfAndDescendants(layer, layers).Skip(1).Where(l => l.layerType == LayerTypes.Normal).ToList();
+        IEnumerable<Layer> DescendantNormalLayers(Layer layer, IReadOnlyList<Layer> layers) =>
+            SelfAndDescendants(layer, layers).Skip(1).Where(l => l.layerType == LayerTypes.Normal);
 
         static string BaseName(string layerName) =>
             LayerTagParser.StripTag(SecondaryMap.StripTags(layerName), LayerTag.Expand);
