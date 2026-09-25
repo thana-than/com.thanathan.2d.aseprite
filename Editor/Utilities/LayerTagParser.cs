@@ -15,7 +15,7 @@ namespace UnityEditor.U2D.Aseprite
 
         internal readonly string[] Tokens;
 
-        LayerTag(params string[] tokens) => Tokens = tokens;
+        internal LayerTag(params string[] tokens) => Tokens = tokens;
     }
 
     /// <summary>

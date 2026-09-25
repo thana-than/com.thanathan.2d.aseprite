@@ -71,10 +71,22 @@ namespace UnityEditor.U2D.Aseprite
             GetCombinedRect(in textureSizes, out var combinedRect);
             var outputTexture = new NativeArray<Color32>(combinedRect.width * combinedRect.height, Allocator.Persistent);
 
-            var outStartX = combinedRect.x;
-            var outStartY = combinedRect.y;
-            var outWidth = combinedRect.width;
-            var outHeight = combinedRect.height;
+            BlendTextures(in textures, in textureSizes, in blendModes, in combinedRect, ref outputTexture);
+
+            output = new MergeOutput()
+            {
+                rect = combinedRect,
+                image = outputTexture
+            };
+        }
+
+        [BurstCompile]
+        public static unsafe void BlendTextures(in NativeArray<IntPtr> textures, in NativeArray<RectInt> textureSizes, in NativeArray<BlendModes> blendModes, in RectInt outputRect, ref NativeArray<Color32> outputTexture)
+        {
+            var outStartX = outputRect.x;
+            var outStartY = outputRect.y;
+            var outWidth = outputRect.width;
+            var outHeight = outputRect.height;
             for (var i = 0; i < textures.Length; ++i)
             {
                 var inputColor = (Color32*)textures[i];
@@ -178,12 +190,6 @@ namespace UnityEditor.U2D.Aseprite
                     }
                 }
             }
-
-            output = new MergeOutput()
-            {
-                rect = combinedRect,
-                image = outputTexture
-            };
         }
 
         [BurstCompile]

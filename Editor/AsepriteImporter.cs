@@ -216,14 +216,16 @@ namespace UnityEditor.U2D.Aseprite
                 m_Tags = ExtractTagsData(m_AsepriteFile);
                 var tileSetsFromFile = ExtractTileData(m_AsepriteFile);
                 var layersFromFile = ExtractLayersFromFile(asepriteFile, m_CanvasSize);
-                
+                var secondaryMaps = importMode == FileImportModes.TileSet ? null : SecondaryMapLayers.Extract(layersFromFile);
+
                 // Process layers
                 FilterOutLayers(layersFromFile, includeHiddenLayers);
                 UpdateCellNames(layersFromFile, layerImportMode == LayerImportModes.MergeFrame);
-                
+                secondaryMaps?.Resolve(layersFromFile);
+
                 // Merging new and old data
                 m_TileSets = MergeNewAndExistingTileData(tileSetsFromFile, m_TileSets);
-                
+
                 m_AsepriteLayers = FetchImageDataFromLayers(layersFromFile, m_AsepriteLayers, out var imageBuffers, out var imageSizes);
                 FetchImageDataFromTilemaps(imageBuffers, imageSizes);
 
@@ -246,7 +248,9 @@ namespace UnityEditor.U2D.Aseprite
                     packOffsets[i] = new Vector2Int(uvTransforms[i].x - spriteRects[i].position.x, uvTransforms[i].y - spriteRects[i].position.y);
                     packOffsets[i] *= -1;
                 }
-                
+
+                var secondaryTextures = GenerateSecondaryTextures(ctx, secondaryMaps, layersFromFile, imageSizes, spriteRects, uvTransforms, (int)spritePad, (int)mosaicPad, packedTextureWidth, packedTextureHeight);
+
                 // SpriteMetaData creation & merging
                 SpriteMetaData[] spriteImportData;
                 if (m_AsepriteImporterSettings.fileImportMode == FileImportModes.SpriteSheet)
@@ -322,7 +326,7 @@ namespace UnityEditor.U2D.Aseprite
                     in m_PlatformSettings,
                     in m_TextureImporterSettings,
                     m_SpritePackingTag,
-                    in m_SecondarySpriteTextures);
+                    in secondaryTextures);
 
                 if (output.texture)
                 {
@@ -349,6 +353,7 @@ namespace UnityEditor.U2D.Aseprite
                 outputImageBuffer.DisposeIfCreated();
                 foreach (var cellBuffer in imageBuffers)
                     cellBuffer.DisposeIfCreated();
+                secondaryMaps?.Dispose();
             }
             catch (Exception e)
             {
@@ -360,6 +365,31 @@ namespace UnityEditor.U2D.Aseprite
                 EditorUtility.SetDirty(this);
                 m_AsepriteFile?.Dispose();
             }
+        }
+
+        SecondarySpriteTexture[] GenerateSecondaryTextures(AssetImportContext ctx, SecondaryMapLayers secondaryMaps, IReadOnlyList<Layer> outputLayers, IReadOnlyList<int2> imageSizes,
+            RectInt[] spriteRects, Vector2Int[] uvTransforms, int spritePadding, int mosaicPadding, int packedWidth, int packedHeight)
+        {
+            var secondaryTextures = new List<SecondarySpriteTexture>(m_SecondarySpriteTextures ?? Array.Empty<SecondarySpriteTexture>());
+            if (secondaryMaps == null || secondaryMaps.isEmpty)
+                return secondaryTextures.ToArray();
+
+            var assetName = System.IO.Path.GetFileNameWithoutExtension(ctx.assetPath);
+            foreach (var map in secondaryMaps.maps)
+            {
+                var packed = secondaryMaps.Pack(map, outputLayers, imageSizes, spriteRects, uvTransforms, spritePadding, mosaicPadding, packedWidth, packedHeight);
+                var texture = TextureGeneration.GenerateSecondary(ctx, map, packed, packedWidth, packedHeight, in m_PlatformSettings, in m_TextureImporterSettings);
+                packed.Dispose();
+                if (texture == null)
+                    continue;
+
+                texture.name = assetName + map.propertyName;
+                ctx.AddObjectToAsset($"SecondaryTexture{map.propertyName}", texture);
+                secondaryTextures.RemoveAll(t => t.name == map.propertyName);
+                secondaryTextures.Add(new SecondarySpriteTexture { name = map.propertyName, texture = texture });
+            }
+
+            return secondaryTextures.ToArray();
         }
 
         void UpdateImporterDataToNewVersion()

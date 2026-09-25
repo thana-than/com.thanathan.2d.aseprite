@@ -93,5 +93,33 @@ namespace UnityEditor.U2D.Aseprite
 
             return output;
         }
+
+        public static Texture2D GenerateSecondary(AssetImportContext ctx,
+            SecondaryMap map,
+            NativeArray<Color32> imageData,
+            int textureWidth,
+            int textureHeight,
+            in List<TextureImporterPlatformSettings> allPlatformSettings,
+            in TextureImporterSettings textureImporterSettings)
+        {
+            var platformSettings = PlatformSettingsUtilities.GetPlatformTextureSettings(ctx.selectedBuildTarget, in allPlatformSettings);
+
+            var textureSettings = textureImporterSettings.ExtractTextureSettings();
+            textureSettings.assetPath = ctx.assetPath;
+            textureSettings.enablePostProcessor = false;
+            textureSettings.containsAlpha = true;
+            textureSettings.hdr = false;
+            textureSettings.npotScale = TextureImporterNPOTScale.None;
+            textureSettings.colorTexture = map.sRGB;
+
+            var textureMipmapSettings = textureImporterSettings.ExtractTextureMipmapSettings();
+            var textureWrapSettings = textureImporterSettings.ExtractTextureWrapSettings();
+
+            var output = map.textureType == TextureImporterType.NormalMap
+                ? TextureGeneratorHelper.GenerateNormalMap(imageData, textureWidth, textureHeight, textureSettings, platformSettings, new TextureNormalSettings(), textureMipmapSettings, null, textureWrapSettings)
+                : TextureGeneratorHelper.GenerateTextureDefault(imageData, textureWidth, textureHeight, textureSettings, platformSettings, textureImporterSettings.ExtractTextureAlphaSettings(), textureMipmapSettings, null, textureWrapSettings);
+
+            return output.texture;
+        }
     }
 }
