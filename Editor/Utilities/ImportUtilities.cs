@@ -288,7 +288,7 @@ namespace UnityEditor.U2D.Aseprite
 
         public static bool IsLayerVisible(int layerIndex, in List<Layer> layers)
         {
-            var layer = layers[layerIndex];
+            var layer = layers.Find(x => x.index == layerIndex);
             var isVisible = (layer.layerFlags & LayerFlags.Visible) != 0;
             if (!isVisible)
                 return false;
