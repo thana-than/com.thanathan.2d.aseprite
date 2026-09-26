@@ -189,7 +189,7 @@ namespace UnityEditor.U2D.Aseprite
             SelfAndDescendants(layer, layers).Skip(1).Where(l => l.layerType == LayerTypes.Normal);
 
         static string BaseName(string layerName) =>
-            LayerTagParser.StripTag(SecondaryMap.StripTags(layerName), LayerTag.Expand);
+            LayerTagParser.StripTag(LayerTagParser.StripTag(SecondaryMap.StripTags(layerName), LayerTag.Expand), LayerTag.Merge);
 
         static unsafe NativeArray<Color32> Composite(Color32 fill, RectInt rect, List<Cell> cells)
         {

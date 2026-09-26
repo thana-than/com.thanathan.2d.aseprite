@@ -12,6 +12,7 @@ namespace UnityEditor.U2D.Aseprite
     {
         /// <summary>#EXPAND or #EXP — expand a group into separate child layers instead of merging them.</summary>
         public static readonly LayerTag Expand = new("#expand", "#exp");
+        public static readonly LayerTag Merge = new("#merge");
 
         internal readonly string[] Tokens;
 

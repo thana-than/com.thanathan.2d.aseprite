@@ -11,12 +11,8 @@ namespace UnityEditor.U2D.Aseprite
         /// <summary>
         /// Flattens the layer list in place.
         /// - Top-level normal layers pass through unchanged.
-        /// - Top-level group layers without #EXPAND/#EXP are merged into a single sprite per frame.
-        /// - Top-level group layers tagged #EXPAND/#EXP are expanded: their direct children are
-        ///   processed recursively with the same rules, and the group itself becomes an empty
-        ///   container layer (LayerTypes.Group, no cells) in the output.
         /// </summary>
-        public static void Import(List<Layer> layers, out List<NativeArray<Color32>> cellBuffers, out List<int2> cellSizes)
+        public static void Import(List<Layer> layers, bool expandByDefault, out List<NativeArray<Color32>> cellBuffers, out List<int2> cellSizes)
         {
             cellBuffers = new List<NativeArray<Color32>>();
             cellSizes = new List<int2>();
@@ -26,8 +22,8 @@ namespace UnityEditor.U2D.Aseprite
             {
                 if (layer.layerType == LayerTypes.Group)
                 {
-                    if (LayerTagParser.HasTag(layer.name, LayerTag.Expand))
-                        ExpandGroupLayer(layer, layers, -1, outputLayers, cellBuffers, cellSizes);
+                    if (ShouldExpand(layer, expandByDefault))
+                        ExpandGroupLayer(layer, layers, -1, expandByDefault, outputLayers, cellBuffers, cellSizes);
                     else
                         MergeGroupLayer(layer, layers, -1, outputLayers, cellBuffers, cellSizes);
                 }
@@ -43,14 +39,14 @@ namespace UnityEditor.U2D.Aseprite
         /// Expands an #EXPAND-tagged group: emits an empty Group layer as a hierarchy container,
         /// then processes each direct child with the same merge/expand/collect rules.
         /// </summary>
-        static void ExpandGroupLayer(Layer group, List<Layer> allLayers, int parentOutputIndex,
+        static void ExpandGroupLayer(Layer group, List<Layer> allLayers, int parentOutputIndex, bool expandByDefault,
             List<Layer> outputLayers, List<NativeArray<Color32>> cellBuffers, List<int2> cellSizes)
         {
             var groupLayer = new Layer
             {
                 layerType = LayerTypes.Group,
                 index = outputLayers.Count,
-                name = LayerTagParser.StripTag(group.name, LayerTag.Expand),
+                name = StripGroupTags(group.name),
                 parentIndex = parentOutputIndex,
                 uuid = group.uuid
             };
@@ -64,8 +60,8 @@ namespace UnityEditor.U2D.Aseprite
                     CollectNormalLayer(child, groupOutputIndex, outputLayers, cellBuffers, cellSizes);
                 else if (child.layerType == LayerTypes.Group)
                 {
-                    if (LayerTagParser.HasTag(child.name, LayerTag.Expand))
-                        ExpandGroupLayer(child, allLayers, groupOutputIndex, outputLayers, cellBuffers, cellSizes);
+                    if (ShouldExpand(child, expandByDefault))
+                        ExpandGroupLayer(child, allLayers, groupOutputIndex, expandByDefault, outputLayers, cellBuffers, cellSizes);
                     else
                         MergeGroupLayer(child, allLayers, groupOutputIndex, outputLayers, cellBuffers, cellSizes);
                 }
@@ -87,7 +83,7 @@ namespace UnityEditor.U2D.Aseprite
             var linkMap = ComputeGroupLinkMap(descendants);
             var framesToMerge = linkMap != null ? FilterLinkedFrames(allCellsPerFrame, linkMap) : allCellsPerFrame;
 
-            var mergedCells = CellTasks.MergeCells(framesToMerge, group.name);
+            var mergedCells = CellTasks.MergeCells(framesToMerge, StripGroupTags(group.name));
             CellTasks.CollectDataFromCells(mergedCells, out var buffers, out var sizes);
             cellBuffers.AddRange(buffers);
             cellSizes.AddRange(sizes);
@@ -97,7 +93,7 @@ namespace UnityEditor.U2D.Aseprite
                 layerType = LayerTypes.Normal,
                 cells = mergedCells,
                 index = outputLayers.Count,
-                name = group.name,
+                name = StripGroupTags(group.name),
                 parentIndex = parentOutputIndex,
                 uuid = group.uuid
             };
@@ -211,5 +207,12 @@ namespace UnityEditor.U2D.Aseprite
             }
             return result;
         }
+
+        static bool ShouldExpand(Layer group, bool expandByDefault) => expandByDefault
+            ? !LayerTagParser.HasTag(group.name, LayerTag.Merge)
+            : LayerTagParser.HasTag(group.name, LayerTag.Expand);
+
+        static string StripGroupTags(string name) =>
+            LayerTagParser.StripTag(LayerTagParser.StripTag(name, LayerTag.Expand), LayerTag.Merge);
     }
 }

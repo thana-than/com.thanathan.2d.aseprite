@@ -70,6 +70,7 @@ namespace UnityEditor.U2D.Aseprite
 
         SerializedProperty m_GenerateModelPrefab;
         SerializedProperty m_PreserveGroupHierarchy;
+        SerializedProperty m_ExpandGroupsByDefault;
         SerializedProperty m_AddSortingGroup;
         SerializedProperty m_UsePivotSortPoint;
         SerializedProperty m_BalanceGroupPivots;
@@ -226,6 +227,7 @@ namespace UnityEditor.U2D.Aseprite
 
             m_GenerateModelPrefab = asepriteImporterSettings.FindPropertyRelative("m_GenerateModelPrefab");
             m_PreserveGroupHierarchy = asepriteImporterSettings.FindPropertyRelative("m_PreserveGroupHierarchy");
+            m_ExpandGroupsByDefault = asepriteImporterSettings.FindPropertyRelative("m_ExpandGroupsByDefault");
             m_AddSortingGroup = asepriteImporterSettings.FindPropertyRelative("m_AddSortingGroup");
             m_UsePivotSortPoint = asepriteImporterSettings.FindPropertyRelative("m_UsePivotSortPoint");
             m_BalanceGroupPivots = asepriteImporterSettings.FindPropertyRelative("m_BalanceGroupPivots");
@@ -416,6 +418,28 @@ namespace UnityEditor.U2D.Aseprite
             }).Every(k_PollForChangesInternal);
             layerModeField.AddToClassList(k_BaseFieldAlignedUssClass);
             foldOut.Add(layerModeField);
+
+            bool IsExpandGroupsVisible() => fileImportMode is FileImportModes.AnimatedSprite
+                && (LayerImportModes)m_LayerImportMode.intValue == LayerImportModes.ShallowMerge;
+
+            var expandGroupsField = new PropertyField(m_ExpandGroupsByDefault, "Expand Groups By Default")
+            {
+                tooltip = "When enabled, every group is expanded unless tagged with #MERGE in Aseprite. When disabled, every group is merged unless tagged with #EXPAND or #EXP.",
+                visible = IsExpandGroupsVisible()
+            };
+            expandGroupsField.Bind(serializedObject);
+            expandGroupsField.AddToClassList(k_SubElementUssClass);
+            expandGroupsField.EnableInClassList(k_HiddenElementUssClass, !IsExpandGroupsVisible());
+            expandGroupsField.schedule.Execute(() =>
+            {
+                var shouldShow = IsExpandGroupsVisible();
+                if (expandGroupsField.visible != shouldShow)
+                {
+                    expandGroupsField.visible = shouldShow;
+                    expandGroupsField.EnableInClassList(k_HiddenElementUssClass, !shouldShow);
+                }
+            }).Every(k_PollForChangesInternal);
+            foldOut.Add(expandGroupsField);
 
             var pivotSpaceField = new PropertyField(m_DefaultPivotSpace, styles.defaultPivotSpace.text)
             {

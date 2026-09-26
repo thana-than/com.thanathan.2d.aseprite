@@ -673,7 +673,7 @@ namespace UnityEditor.U2D.Aseprite
             }
             else if (layerImportMode == LayerImportModes.ShallowMerge)
             {
-                ImportShallowMerge.Import(newLayers, out imageBuffers, out imageSizes);
+                ImportShallowMerge.Import(newLayers, m_AsepriteImporterSettings.expandGroupsByDefault, out imageBuffers, out imageSizes);
                 isIndividual = true;
             }
             else
