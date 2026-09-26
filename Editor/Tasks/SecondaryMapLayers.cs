@@ -46,16 +46,21 @@ namespace UnityEditor.U2D.Aseprite
                     extracted.Add(layer.index);
 
                 var baseName = BaseName(root.name);
-                var target = layers.Find(l => l.parentIndex == root.parentIndex && !roots.ContainsKey(l) && BaseName(l.name) == baseName);
-                if (target == null)
+                var targetIndex = root.parentIndex;
+                if (!string.IsNullOrEmpty(baseName))
                 {
-                    Debug.LogWarning($"Secondary map layer \"{root.name}\" has no sibling layer named \"{baseName}\" to pair with.");
-                    continue;
+                    var target = layers.Find(l => l.parentIndex == root.parentIndex && !roots.ContainsKey(l) && BaseName(l.name) == baseName);
+                    if (target == null)
+                    {
+                        Debug.LogWarning($"Secondary map layer \"{root.name}\" has no sibling layer named \"{baseName}\" to pair with.");
+                        continue;
+                    }
+                    targetIndex = target.index;
                 }
 
                 var cellLayers = subtree.Where(l => l.layerType == LayerTypes.Normal).ToList();
-                if (!result.m_MapLayersByTarget.TryGetValue(target.index, out var byMap))
-                    result.m_MapLayersByTarget[target.index] = byMap = new Dictionary<string, List<Layer>>();
+                if (!result.m_MapLayersByTarget.TryGetValue(targetIndex, out var byMap))
+                    result.m_MapLayersByTarget[targetIndex] = byMap = new Dictionary<string, List<Layer>>();
 
                 foreach (var map in rootMaps)
                 {
@@ -147,9 +152,9 @@ namespace UnityEditor.U2D.Aseprite
             var resolved = new Dictionary<string, HashSet<Layer>>();
             foreach (var source in sources)
             {
-                foreach (var ancestor in Ancestors(source))
+                foreach (var targetIndex in Ancestors(source).Select(a => a.index).Append(-1))
                 {
-                    if (!m_MapLayersByTarget.TryGetValue(ancestor.index, out var byMap))
+                    if (!m_MapLayersByTarget.TryGetValue(targetIndex, out var byMap))
                         continue;
 
                     foreach (var (propertyName, mapLayers) in byMap)
