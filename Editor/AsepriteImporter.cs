@@ -664,7 +664,8 @@ namespace UnityEditor.U2D.Aseprite
         List<Layer> FetchImageDataFromLayers(List<Layer> newLayers, IReadOnlyList<Layer> oldLayers, out List<NativeArray<Color32>> imageBuffers, out List<int2> imageSizes)
         {
             // TileSet will always be in individual layers, since each layer can refer to a different tileSet.
-            var isIndividual = layerImportMode == LayerImportModes.IndividualLayers || importMode == FileImportModes.TileSet; 
+            var isIndividual = layerImportMode == LayerImportModes.IndividualLayers || importMode == FileImportModes.TileSet;
+            var assetName = System.IO.Path.GetFileNameWithoutExtension(assetPath);
             if (isIndividual)
             {
                 CellTasks.GetCellsFromLayers(newLayers, out var cells);
@@ -678,10 +679,12 @@ namespace UnityEditor.U2D.Aseprite
             }
             else
             {
-                var assetName = System.IO.Path.GetFileNameWithoutExtension(assetPath);
                 ImportMergedLayers.Import(assetName, newLayers, out imageBuffers, out imageSizes);
             }
-            
+
+            if (!string.IsNullOrEmpty(spriteNamePattern))
+                SpriteNamePattern.Apply(spriteNamePattern, assetName, !isIndividual, newLayers);
+
             return MergeNewAndExistingLayerData(newLayers, oldLayers, isIndividual);
         }
 
@@ -979,11 +982,18 @@ namespace UnityEditor.U2D.Aseprite
                     }
                 }
 
+                // Sprites keep their existing name unless a pattern sets it. Clearing the pattern restores the default names.
+                var updateSpriteNames = !string.IsNullOrEmpty(spriteNamePattern)
+                    || !string.IsNullOrEmpty(m_PreviousAsepriteImporterSettings.spriteNamePattern);
+
                 // Update with new pack data
                 for (var i = 0; i < newSpriteMeta.Count; ++i)
                 {
                     var newMeta = newSpriteMeta[i];
                     var finalMeta = finalSpriteMeta.Find(x => x.spriteID == newMeta.spriteID);
+
+                    if (finalMeta != null && updateSpriteNames)
+                        finalMeta.name = newMeta.name;
 
                     // Override previous pivot and sprite rect if:
                     // - Importer settings have been updated

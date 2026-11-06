@@ -238,6 +238,33 @@ namespace UnityEditor.U2D.Aseprite
         }
 
         /// <summary>
+        /// Naming convention for the generated Sprites, built from the tokens {file}, {groups} and {layer}.
+        /// Leave empty to keep the default names.
+        /// </summary>
+        public string spriteNamePattern
+        {
+            get => m_AsepriteImporterSettings.spriteNamePattern;
+            set
+            {
+                m_AsepriteImporterSettings.spriteNamePattern = value;
+                SetDirty();
+            }
+        }
+
+        /// <summary>
+        /// Material assigned to the generated Sprite Renderers and Images. Leave empty to use Unity's default.
+        /// </summary>
+        public Material defaultMaterial
+        {
+            get => m_AsepriteImporterSettings.defaultMaterial;
+            set
+            {
+                m_AsepriteImporterSettings.defaultMaterial = value;
+                SetDirty();
+            }
+        }
+
+        /// <summary>
         /// Add Shadow Casters to the generated GameObjects with SpriteRenderers.
         /// </summary>
         public bool addShadowCasters

@@ -4,6 +4,7 @@ using Unity.Mathematics;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.U2D.Aseprite;
 using UnityEngine.UI;
 
 namespace UnityEditor.U2D.Aseprite
@@ -241,6 +242,8 @@ namespace UnityEditor.U2D.Aseprite
                 var image = gameObject.AddComponent<Image>();
                 image.sprite = sprite;
                 image.enabled = startEnabled;
+                if (importSettings.defaultMaterial != null)
+                    image.material = importSettings.defaultMaterial;
 
                 var rt = gameObject.GetComponent<RectTransform>();
                 if (sprite != null)
@@ -250,12 +253,7 @@ namespace UnityEditor.U2D.Aseprite
                 }
 
                 if (importSettings.addUIComponents)
-                {
-                    var csf = gameObject.AddComponent<ContentSizeFitter>();
-                    csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-                    csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-                    gameObject.AddComponent<ImageUseSpritePivot>();
-                }
+                    gameObject.AddComponent<ImageSpriteLayout>().SetUseNativeSize(true, true);
             }
             else
             {
@@ -264,6 +262,8 @@ namespace UnityEditor.U2D.Aseprite
                 sr.enabled = startEnabled;
                 sr.sortingOrder = layer.index + firstCell.additiveSortOrder;
                 sr.spriteSortPoint = importSettings.usePivotSortPoint ? SpriteSortPoint.Pivot : SpriteSortPoint.Center;
+                if (importSettings.defaultMaterial != null)
+                    sr.sharedMaterial = importSettings.defaultMaterial;
 #if ENABLE_URP
                 if (importSettings.addShadowCasters)
                     gameObject.AddComponent<UnityEngine.Rendering.Universal.ShadowCaster2D>();

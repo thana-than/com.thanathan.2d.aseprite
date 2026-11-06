@@ -17,7 +17,19 @@ Generates the prefab hierarchy using `Image` components and `RectTransform` inst
 ---
 
 ### UI Components
-Adds `ContentSizeFitter` and `ImageUseSpritePivot` to each layer GameObject. Only available in UI mode.
+Adds `ImageSpriteLayout` to each layer GameObject, so its pivot and native size follow the current sprite. Only available in UI mode.
+
+---
+
+### Sprite Name Pattern
+Sets a naming convention for generated sprites using the tokens `{file}`, `{groups}` and `{layer}`, e.g. `{file}_{groups}_{layer}`. Nested groups are joined with `_`. An empty token drops one neighbouring separator, and multi-frame layers keep their `_Frame_N` suffix. Leave it empty for the default names.
+
+Renaming doesn't break references, since sprites are identified by ID. Applies to Animated Sprite mode, not to tiles or Sprite Sheet sprites.
+
+---
+
+### Default Material
+Assigns a material to the generated `SpriteRenderer`s or `Image`s. Leave it empty for Unity's default.
 
 ---
 

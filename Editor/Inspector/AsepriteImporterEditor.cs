@@ -81,6 +81,8 @@ namespace UnityEditor.U2D.Aseprite
         SerializedProperty m_PerLayerAnimators;
         SerializedProperty m_GenerateAnimationImageTarget;
         SerializedProperty m_AddUIComponents;
+        SerializedProperty m_SpriteNamePattern;
+        SerializedProperty m_DefaultMaterial;
         SerializedProperty m_GenerateSpriteAtlas;
 
         VisualElement m_RootVisualElement;
@@ -237,6 +239,8 @@ namespace UnityEditor.U2D.Aseprite
             m_PerLayerAnimators = asepriteImporterSettings.FindPropertyRelative("m_PerLayerAnimators");
             m_GenerateAnimationImageTarget = asepriteImporterSettings.FindPropertyRelative("m_GenerateAnimationImageTarget");
             m_AddUIComponents = asepriteImporterSettings.FindPropertyRelative("m_AddUIComponents");
+            m_SpriteNamePattern = asepriteImporterSettings.FindPropertyRelative("m_SpriteNamePattern");
+            m_DefaultMaterial = asepriteImporterSettings.FindPropertyRelative("m_DefaultMaterial");
             m_GenerateSpriteAtlas = asepriteImporterSettings.FindPropertyRelative("m_GenerateSpriteAtlas");
 
             var prevAsepriteImporterSettings = serializedObject.FindProperty("m_PreviousAsepriteImporterSettings");
@@ -440,6 +444,22 @@ namespace UnityEditor.U2D.Aseprite
                 }
             }).Every(k_PollForChangesInternal);
             foldOut.Add(expandGroupsField);
+
+            var spriteNamePatternField = new PropertyField(m_SpriteNamePattern, styles.spriteNamePattern.text)
+            {
+                tooltip = styles.spriteNamePattern.tooltip
+            };
+            spriteNamePatternField.schedule.Execute(() =>
+            {
+                var shouldShow = fileImportMode is FileImportModes.AnimatedSprite;
+                if (spriteNamePatternField.visible != shouldShow)
+                {
+                    spriteNamePatternField.visible = shouldShow;
+                    spriteNamePatternField.EnableInClassList(k_HiddenElementUssClass, !shouldShow);
+                }
+            }).Every(k_PollForChangesInternal);
+            spriteNamePatternField.Bind(serializedObject);
+            foldOut.Add(spriteNamePatternField);
 
             var pivotSpaceField = new PropertyField(m_DefaultPivotSpace, styles.defaultPivotSpace.text)
             {
@@ -722,7 +742,23 @@ namespace UnityEditor.U2D.Aseprite
             }).Every(k_PollForChangesInternal);
             parent.Add(shadowCasterField);
 
-            // Add UI components (ImageUseSpritePivot + ContentSizeFitter) — only visible in image target mode
+            var isDefaultMaterialEnabled = m_GenerateModelPrefab.boolValue;
+            var defaultMaterialField = new PropertyField(m_DefaultMaterial, styles.defaultMaterial.text)
+            {
+                tooltip = styles.defaultMaterial.tooltip
+            };
+            defaultMaterialField.Bind(serializedObject);
+            defaultMaterialField.AddToClassList(k_SubElementUssClass);
+            defaultMaterialField.SetEnabled(isDefaultMaterialEnabled);
+            defaultMaterialField.schedule.Execute(() =>
+            {
+                isDefaultMaterialEnabled = m_GenerateModelPrefab.boolValue;
+                if (defaultMaterialField.enabledSelf != isDefaultMaterialEnabled)
+                    defaultMaterialField.SetEnabled(isDefaultMaterialEnabled);
+            }).Every(k_PollForChangesInternal);
+            parent.Add(defaultMaterialField);
+
+            // Add UI components (ImageSpriteLayout) — only visible in image target mode
             var isUIComponentsEnabled = m_GenerateModelPrefab.boolValue && m_GenerateAnimationImageTarget.boolValue;
             var addUIComponentsField = new PropertyField(m_AddUIComponents, styles.addUIComponents.text)
             {
@@ -1858,7 +1894,9 @@ namespace UnityEditor.U2D.Aseprite
             public readonly GUIContent balanceGroupPivots = EditorGUIUtility.TrTextContent("Balance Group Pivots", "Give preserved group layers the pivot of their combined contents, so that their child layers sit close to zero. Requires the Pivot Space to be set to Layer.");
             public readonly GUIContent usePivotSortPoint = EditorGUIUtility.TrTextContent("Pivot Sort Point", "Set the Sprite Sort Point of the generated Sprite Renderers to Pivot instead of Center.");
             public readonly GUIContent addShadowCasters = EditorGUIUtility.TrTextContent("Shadow Casters", "Add Shadow Casters on all GameObjects with SpriteRenderer. Note: The Universal Rendering Pipeline package has to be installed.");
-            public readonly GUIContent addUIComponents = EditorGUIUtility.TrTextContent("UI Components", "Add ImageUseSpritePivot and ContentSizeFitter to each Image layer so pivot and size automatically match the sprite during animation.");
+            public readonly GUIContent addUIComponents = EditorGUIUtility.TrTextContent("UI Components", "Add ImageSpriteLayout to each Image layer so pivot and size automatically match the sprite during animation.");
+            public readonly GUIContent spriteNamePattern = EditorGUIUtility.TrTextContent("Sprite Name Pattern", "Naming convention for the generated Sprites, e.g. {file}_{groups}_{layer}. An empty token drops one neighbouring separator, and multi-frame layers keep their _Frame_N suffix. Leave empty for the default names.");
+            public readonly GUIContent defaultMaterial = EditorGUIUtility.TrTextContent("Default Material", "Material assigned to the generated Sprite Renderers and Images. Leave empty to use Unity's default.");
             public readonly GUIContent perLayerAnimators = EditorGUIUtility.TrTextContent("Per-Layer Animators", "Generate one AnimatorController and Animator per layer. Clips are prefixed with the layer name and only target that layer's own component.");
             public readonly GUIContent generateAnimationClips = EditorGUIUtility.TrTextContent("Animation Clips", "Generate Animation Clips based on the frame and tag data from the Aseprite file.");
             public readonly GUIContent generateIndividualEvents = EditorGUIUtility.TrTextContent("Individual Events", "Events will be generated with their own method name. If disabled, all events will be received by the method `OnAnimationEvent(string)`.");
