@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -10,7 +11,12 @@ namespace UnityEditor.U2D.Aseprite
     internal static class BackgroundImport
     {
         static readonly string k_AssetsPath = "Assets/";
+        // Aseprite writes in place, so the watcher fires while the file is still growing.
+        // A refresh during that write makes Unity hash a partial file and log
+        // "Amount of processed bytes ... does not match file size".
+        static readonly TimeSpan k_SaveSettleTime = TimeSpan.FromSeconds(0.5);
         static readonly List<string> s_AssetsFullPath = new List<string>();
+        static long s_LastChangeTicks = 0;
         static bool s_HasChange = false;
         static bool s_LastSettingsValue = false;
 
@@ -98,6 +104,7 @@ namespace UnityEditor.U2D.Aseprite
                 return;
 
             s_AssetsFullPath.Add(e.FullPath);
+            Interlocked.Exchange(ref s_LastChangeTicks, DateTime.UtcNow.Ticks);
             s_HasChange = true;
         }
 
@@ -126,6 +133,8 @@ namespace UnityEditor.U2D.Aseprite
                 return;
             }
             if (Application.isPlaying)
+                return;
+            if (DateTime.UtcNow.Ticks - Interlocked.Read(ref s_LastChangeTicks) < k_SaveSettleTime.Ticks)
                 return;
 
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport & ImportAssetOptions.ForceUpdate);
