@@ -870,7 +870,7 @@ namespace UnityEditor.U2D.Aseprite
                     {
                         var data = tagChunk.tagData[n];
                         var tag = new Tag();
-                        tag.name = data.name;
+                        tag.name = data.name.Trim();
                         tag.noOfRepeats = data.noOfRepeats;
                         tag.fromFrame = data.fromFrame;
                         // Adding one more frame as Aseprite's tags seems to always be 1 short.
