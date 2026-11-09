@@ -12,6 +12,7 @@ namespace UnityEngine.U2D.Aseprite
         [SerializeField] private bool useSpritePivotY = true;
         [SerializeField] private bool useNativeSizeX;
         [SerializeField] private bool useNativeSizeY;
+        [SerializeField] private Vector2 nativeSizeMultiplier = Vector2.one;
 
         private DrivenRectTransformTracker _tracker;
         private Image _image;
@@ -62,7 +63,7 @@ namespace UnityEngine.U2D.Aseprite
             if (useSpritePivotY) pivot.y = spritePivot.y;
             rect.pivot = pivot;
 
-            var nativeSize = sprite.rect.size / _image.pixelsPerUnit;
+            var nativeSize = Vector2.Scale(sprite.rect.size / _image.pixelsPerUnit, nativeSizeMultiplier);
             if (useNativeSizeX) rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, nativeSize.x);
             if (useNativeSizeY) rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, nativeSize.y);
         }

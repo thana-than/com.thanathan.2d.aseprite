@@ -17,7 +17,7 @@ Generates the prefab hierarchy using `Image` components and `RectTransform` inst
 ---
 
 ### UI Components
-Adds `ImageSpriteLayout` to each layer GameObject, so its pivot and native size follow the current sprite. Only available in UI mode.
+Adds `ImageSpriteLayout` to each layer GameObject, so its pivot and native size follow the current sprite. Each is set per axis, and native size has a per-axis multiplier (default 1). Only available in UI mode.
 
 ---
 
